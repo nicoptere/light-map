@@ -11,48 +11,91 @@
     <script>
 
 
-        //use proxy?
-        var proxy = "./proxy.php?url=";
+        // provider: URL of the tile map service
+        // domains: URL of the domains used by the tile map service
+        // you can choose from a list of *free* TMS providers:
+        // http://leaflet-extras.github.io/leaflet-providers/preview/
+        // example:
+        //
+        //        provider = "http://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png";
+        //        domains = [ "a", "b", "c" ];
+        //
+        //alternately you can use mbtiles
 
-        //list of *free* TMS providers:
-
-        //http://leaflet-extras.github.io/leaflet-providers/preview/
         var provider, domains;
-
-        provider = "http://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png";
-        domains = [ "a", "b", "c" ];
-
         provider = "http://ttiles{s}.mqcdn.com/tiles/1.0.0/vy/sat/{z}/{x}/{y}.png";
         domains = [ "01" , "02", "03", "04" ];
 
-        var m = new Map( proxy + provider, domains, 512,512, 0, 10 );
-        document.body.appendChild( m.canvas );
 
+        // we often need to use a proxy to load images on local servers
+        // check out this gist : https://gist.github.com/nicoptere/a23ffae9ed51a5ca9766
+        var proxy = "./proxy.php?url=";
+
+        var map = new Map( proxy + provider, domains, 512,512, 0, 10 );
+        document.body.appendChild( map.canvas );
+
+
+
+        //listening to the loading events
+
+        //all tiles were loaded
         function onLoadComplete( status )
         {
-            console.log( "onLoadComplete", "->", status );
+            if(status==0 )
+            {
+                console.log( "onLoadComplete", "->", status );
+                var ctx = map.ctx;
+                var imgData = ctx.getImageData(0,0,map.width, map.height );
+                var data = imgData.data;
+
+                var noise = 500;
+                for( var i = 0; i < data.length; i+= 4 )
+                {
+                    data[ i ]       -= ~~( Math.random() * noise );
+                    data[ i + 1 ]   -= ~~( Math.random() * noise );
+                    data[ i + 2 ]   -= ~~( Math.random() * noise );
+                }
+                imgData.data = data;
+                ctx.putImageData( imgData, 0,0 );
+            }
         }
+
+        //a new tile was loaded here
         function onTileLoaded( tile )
         {
             console.log( "onTileLoaded", "->", tile );
         }
+
+        //the cnvas' context is returned here
         function onTextureUpdate( ctx )
         {
-            console.log( "onTextureUpdate", "->", ctx );
+            //console.log( "onTextureUpdate", "->", ctx );
+
+
         }
 
-//        m.eventEmitter.on( Map.ON_LOAD_COMPLETE, onLoadComplete );
-//        m.eventEmitter.on( Map.ON_TILE_LOADED, onTileLoaded );
-//        m.eventEmitter.on( Map.ON_TEXTURE_UPDATE, onTextureUpdate );
+        map.eventEmitter.on( Map.ON_LOAD_COMPLETE, onLoadComplete );
+        map.eventEmitter.on( Map.ON_TILE_LOADED, onTileLoaded );
+        map.eventEmitter.on( Map.ON_TEXTURE_UPDATE, onTextureUpdate );
 
-        var lat = 48.2;
-        var lon = 2.3;
-        var zoom = 10;
+
+
+        //this would be where I live :)
+        var lat = o_lat = 48.854777;
+        var lon = o_lon = 2.317499;
+        var zoom = 15;
+        map.setView( lat, lon, zoom );
+
+
         function update(){
 
-            m.setView( lat, lon, zoom );
-            lon += .001;
-            lat -= .001;
+            var t = ( Math.sin( Date.now() * 0.001 ) );
+
+            lat = o_lat ;//+ t * .0013218;
+            lon = o_lon + t * .0021238;
+
+            map.setView( lat, lon, zoom );
+
         }
         setInterval( update, 1000 / 60 )
 

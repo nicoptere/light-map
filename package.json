@@ -5,10 +5,7 @@
   "main": "bin/light-map.js",
   "scripts": {
     "test": "new Map( provider, domains, 512,512, 0,10 )"
-  },
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/nicoptere/light-map.git"
+
   },
   "keywords": [
     "map",
@@ -20,9 +17,39 @@
     "mercator"
   ],
   "author": "Nicolas Barradeau",
+  "maintainers": [
+    {
+      "name": "Nicolas Barradeau",
+      "email": "nicoptere@gmail.com",
+      "web": "http://www.barradeau.com/blog"
+    }
+  ],
+
+  "devDependencies": {
+    "uglifyjs": "^2.4.10"
+  },
+
+  "scripts": {
+    "bundle": "browserify map/Map.js --standalone Map -o bin/light-map.js",
+    "uglify": "uglifyjs bin/light-map.js -m -c -screw-ie8 > example/light-map.min.js",
+    "build": "npm run bundle && npm run uglify"
+  },
+
+  "demos": [
+    "./example/index.html"
+  ],
+
+  "readme": "Light Map\n=============\n\nJavascript lightweight tile map service viewer released under the [MIT License](http://opensource.org/licenses/MIT).",
+
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/nicoptere/light-map.git"
+  },
   "license": "MIT",
+
   "bugs": {
     "url": "https://github.com/nicoptere/light-map/issues"
   },
+
   "homepage": "https://github.com/nicoptere/light-map"
 }

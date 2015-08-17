@@ -70,29 +70,11 @@ module.exports = function(){
         this.ctx = this.canvas.getContext("2d");
         this.container.appendChild(this.canvas);
 
-        //canvas.style.position = "absolute";
-        //canvas.style.top = "0";
-        //canvas.style.left = "0";
-
         this.domElement = document.createElement("div");
         this.domElement.style.position = "absolute";
         this.domElement.style.top = "0";
         this.domElement.style.left = "0";
-        this.domElement.style.visibility = "hidden";
-
-        this.container.appendChild(this.domElement);
-
-        //debug
-        //if (debugColor != null ) {
-            this.frame = document.createElement("div");
-            this.frame.style.position = "absolute";
-            this.frame.style.border = "3px solid black";
-            this.frame.style.left   = this.viewRect.x + "px";
-            this.frame.style.top    = this.viewRect.y + "px";
-            this.frame.style.width  = this.viewRect.w + "px";
-            this.frame.style.height = this.viewRect.h + "px";
-            this.container.appendChild(this.frame);
-        //}
+        //this.domElement.style.visibility = "hidden";
 
     }
 
@@ -135,7 +117,7 @@ module.exports = function(){
                 tile.localX = px;
                 tile.localY = py;
 
-                this.ctx.drawImage( tile.img, parseInt( px +.5 ), parseInt( py +.5 ) );
+                this.ctx.drawImage( tile.img, Math.round( px ), Math.round( py ) );
 
             }
         }
