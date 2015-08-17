@@ -3,10 +3,6 @@ light map
 
 minimal, lightweight, self contained TMS viewer with a 2d canvas renderer.
 
-### Live demo ###
-
-- [Basic example]()
-
 ### Installation ###
 ```
 npm install light-map --save
@@ -44,7 +40,6 @@ npm install light-map --save
     document.body.appendChild( map.canvas );
 
 
-
     //listening to the loading events
 
     //all tiles were loaded
@@ -62,7 +57,7 @@ npm install light-map --save
         console.log( "onTileLoaded", "->", tile );
     }
 
-    //the cnvas' context is returned here
+    //the canvas' context is returned here
     function onTextureUpdate( ctx )
     {
         console.log( "onTextureUpdate" );
@@ -136,6 +131,7 @@ npm install light-map --save
 </script>
 
 ```
+
 ### additional information ###
 
 [Python library to perform Mercator conversions](http://www.maptiler.org/google-maps-coordinates-tile-bounds-projection/)
