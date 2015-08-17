@@ -68,7 +68,6 @@ npm install light-map --save
     map.eventEmitter.on( Map.ON_TEXTURE_UPDATE, onTextureUpdate );
 
 
-
     //this would be where I live :)
     var lat = o_lat = 48.854777;
     var lon = o_lon = 2.317499;
@@ -131,6 +130,8 @@ npm install light-map --save
 </script>
 
 ```
+it should look like this:
+<img src="https://github.com/nicoptere/light-map/blob/master/example/light-map.jpg">
 
 ### additional information ###
 
