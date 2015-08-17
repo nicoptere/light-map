@@ -1,0 +1,28 @@
+{
+  "name": "light-map",
+  "version": "0.0.0",
+  "description": "a light-weight TMS viewer",
+  "main": "bin/light-map.js",
+  "scripts": {
+    "test": "new Map( provider, domains, 512,512, 0,10 )"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/nicoptere/light-map.git"
+  },
+  "keywords": [
+    "map",
+    "maps",
+    "tms",
+    "WGS84",
+    "canvas",
+    "self-contained",
+    "mercator"
+  ],
+  "author": "Nicolas Barradeau",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/nicoptere/light-map/issues"
+  },
+  "homepage": "https://github.com/nicoptere/light-map"
+}
