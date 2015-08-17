@@ -3,8 +3,6 @@ light map
 
 minimal, lightweight, self contained TMS viewer with a 2d canvas renderer.
 
-### About Delaunay triangulation ###
-
 ### Live demo ###
 
 - [Basic example]()
