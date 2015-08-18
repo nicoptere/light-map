@@ -35,8 +35,8 @@
 
         <a id="welcome-to-github-pages" class="anchor" href="#welcome-to-github-pages" aria-hidden="true"><span class="octicon octicon-link"></span></a>foreword</h3>
         <p>the purpose of this lib is to provide a minimal engine to display a TMS (Tile Map Service) like OSM, MapBox, MapQuest...
-        there are already many APIs out there such as <a href="http://leafletjs.com/">leaflet</a> and they work fine, they are very comprehensive, well tested so I'd recommend them for a mainstream use.<</p>
-        <p>I found it impractical to work with for "advanced" use cases ; I needed to draw the view in a canvas (something leaflet wasn't designed for) and had to hack my way so much so that I ended up rebuilding an engine from scratch.</p>
+        there are already many APIs out there such as <a href="http://leafletjs.com/">leaflet</a> and they work fine, they are very comprehensive, well tested so I'd recommend them for a mainstream use.</p>
+        <p>I found it impractical to work with for "advanced" use cases though ; I needed to draw the view in a canvas (something leaflet wasn't designed for) and had to hack my way so much so that I ended up rebuilding an engine from scratch.</p>
         <p>it's rough around the edges, not fully tested and has lots of room for improvement. in a word, it's not for the faint of the heart.</p>
 
 
@@ -202,7 +202,7 @@ map_provider.dispose();
 map_provider.provider = provider.getAttribute( "data-url" );
 map_provider.domains = provider.getAttribute( "data-domains").split( "," );</pre>
 
-          
+
 
 <h3>examples</h3>
 <p>there are 2 examples in the repo:</p>
