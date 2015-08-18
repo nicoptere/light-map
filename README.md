@@ -13,8 +13,9 @@ npm install light-map --save
 
 
 ### live example ###
-- an example with the most common methods let's you set the lat/lon/zoom, change the width/height of the canvas and monitor the load progress.
-- as the map output is a Canvas2D, this is an example with a fixed setup that shows how to post process the output (adding a vignette).
+- [an example with the most common methods](http://nicoptere.github.io/light-map/example/) let's you set the lat/lon/zoom, change the width/height of the canvas and monitor the load progress.
+- as the map output is a Canvas2D, [this is an example with a fixed setup](http://nicoptere.github.io/light-map/example/basic.html) that shows how to post process the output (adding a vignette).
+
 ### basic example ###
 
 ```js
@@ -27,10 +28,9 @@ npm install light-map --save
     document.body.appendChild( map.canvas );
     map.setView(0,0,1);
 </script>
-
 ```
 
-### more advanced example ###
+### vignette example ###
 
 ```js
 <script src="light-map.min.js"></script>
