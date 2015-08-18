@@ -630,6 +630,10 @@ module.exports = function(){
 
     }
 
+    /**
+     * adds a loaded tile to the pool
+     * @param tile
+     */
     function appendTile( tile )
     {
 
@@ -638,7 +642,6 @@ module.exports = function(){
 
         var img = tile.img;
         scope.loadedTiles.push( tile );
-
         scope.locateTiles( true );
 
         scope.eventEmitter.emit( Map.ON_TILE_LOADED, tile );
@@ -649,7 +652,14 @@ module.exports = function(){
         }
     }
 
-
+    /**
+     * evaluates the "altitude" at which a camera should be from the ground (in meters)
+     * more context : http://gis.stackexchange.com/questions/12991/how-to-calculate-distance-to-ground-of-all-18-osm-zoom-levels/142555#142555
+     * @param latitude
+     * @param zoom
+     * @param multiplier
+     * @returns {*}
+     */
     function altitude( latitude, zoom, multiplier )
     {
         latitude    = latitude || this.latitude;
@@ -660,7 +670,11 @@ module.exports = function(){
         return mercator.earthRadius + ( C * Math.cos( latitude * RAD ) / Math.pow( 2, zoom ) * multiplier );
     }
 
-
+    /**
+     * gets the map resolution in pixels at a given zoom level
+     * @param zoom
+     * @returns {*}
+     */
     function resolution( zoom )
     {
         zoom        = zoom || this.zoom;
