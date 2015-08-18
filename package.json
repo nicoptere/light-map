@@ -1,6 +1,6 @@
 {
   "name": "light-map",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "a light-weight TMS viewer",
   "main": "bin/light-map.js",
   "scripts": {
@@ -25,13 +25,15 @@
     }
   ],
 
-  "devDependencies": {
-    "uglifyjs": "^2.4.10",
+  "dependencies" :{
     "events":"1.0.2"
+  },
+  "devDependencies": {
+    "uglifyjs": "^2.4.10"
   },
 
   "scripts": {
-    "bundle": "browserify map/Map.js --standalone Map -o example/light-map.js",
+    "bundle": "browserify map/Map.js --standalone Map -o bin/light-map.js",
     "uglify": "uglifyjs bin/light-map.js -m -c -screw-ie8 > example/light-map.min.js",
     "build": "npm run bundle && npm run uglify"
   },
