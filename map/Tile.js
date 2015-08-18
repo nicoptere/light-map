@@ -174,6 +174,24 @@ module.exports = function()
                     latLngBound[3] < this.latLngBounds[1]   );
     }
 
+    function dispose() {
+
+        this.map = undef;
+        delete this.map;
+        this.meterBounds = undef;
+        delete this.meterBounds;
+        this.pixelBounds = undef;
+        delete this.pixelBounds;
+
+        delete this.viewRectPosition;
+        delete this.latLngBounds;
+        delete this.img;
+
+        this.eventEmitter.removeAllListeners();
+        delete this.eventEmitter;
+
+    }
+
     var _p = Tile.prototype;
     _p.constructor = Tile;
 
@@ -184,6 +202,7 @@ module.exports = function()
     _p.containsLatLng = containsLatLng;
     _p.isContained = isContained;
     _p.intersect = intersect;
+    _p.dispose = dispose;
 
     Tile.ON_TILE_LOADED = 0;
 

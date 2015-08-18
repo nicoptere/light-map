@@ -362,9 +362,18 @@ module.exports = function(){
 
     };
 
+    /**
+     * sets the view rect
+     * @param x
+     * @param y
+     * @param w
+     * @param h
+     */
     function setViewRect( x,y,w,h )
     {
         this.viewRect = new Rect( x,y,w,h );
+        this._width = w;
+        this._height = h;
         if( this.canvas != null ){
 
             this.canvas.width  = this.viewRect.w;
@@ -377,17 +386,20 @@ module.exports = function(){
     {
         if( this.isNode )return;
 
-        this.ctx.strokeStyle = "rgba( 255,0,0,1 )";
         this.ctx.clearRect( 0, 0, this.viewRect.w, this.viewRect.h );
 
         var c = this.getViewRectCenterPixels();
         var ctx = this.ctx;
+        var zoom = this.zoom;
         var viewRect = this.viewRect;
         this.loadedTiles.forEach(function(tile)
         {
-            var px = viewRect.x  +  viewRect.w / 2 + ( tile.px - c[ 0 ] );
-            var py = viewRect.y  +  viewRect.h / 2 + ( tile.py - c[ 1 ] );
-            ctx.drawImage( tile.img, Math.round( px ), Math.round( py ) );
+            if( tile.zoom == zoom )
+            {
+                var px = viewRect.x  +  viewRect.w / 2 + ( tile.px - c[ 0 ] );
+                var py = viewRect.y  +  viewRect.h / 2 + ( tile.py - c[ 1 ] );
+                ctx.drawImage( tile.img, Math.round( px ), Math.round( py ) );
+            }
         });
 
         this.eventEmitter.emit( Map.ON_TEXTURE_UPDATE, this.ctx );
@@ -564,10 +576,10 @@ module.exports = function(){
                             break;
                         }
                     }
-                    if (exists == false) {
-                        tiles.push(new Tile(this, key));
-                        this.keys.push(key);
-                    }
+                    //if (exists == false) {
+                    //    tiles.push(new Tile(this, key));
+                    //    this.keys.push(key);
+                    //}
                 }
                 v++;
             }
@@ -619,9 +631,10 @@ module.exports = function(){
      */
     function setView( lat, lng, zoom )
     {
-        this.latitude = lat;
-        this.longitude = lng;
-        this.zoom = Math.max( this.minZoom, Math.min( this.maxZoom, zoom ) );
+        this.latitude = lat || this.latitude;
+        this.longitude = lng || this.longitude;
+        this.zoom = Math.max( this.minZoom, Math.min( this.maxZoom, zoom || this.zoom ) );
+
         this.load();
         this.renderTiles();
     }
@@ -712,6 +725,17 @@ module.exports = function(){
         return mercator.resolution( zoom );
     }
 
+    function dispose()
+    {
+        var scoep = this;
+        this.tiles.forEach( function(tile){ tile.eventEmitter.remove( Tile.ON_TILE_LOADED, scope.appendTile ); tile.dispose(); });
+        this.loadedTiles.forEach( function(tile){ tile.dispose(); });
+
+        this.tiles = [];
+        this.loadedTiles = [];
+        this.keys = [];
+
+    }
 
     //Map constants
     Map.ON_LOAD_COMPLETE    = 0;
@@ -742,6 +766,7 @@ module.exports = function(){
     _p.appendTile              = appendTile;
     _p.altitude                = altitude;
     _p.resolution              = resolution;
+    _p.dispose                 = dispose;
 
     return Map;
 
@@ -1350,6 +1375,24 @@ module.exports = function()
                     latLngBound[3] < this.latLngBounds[1]   );
     }
 
+    function dispose() {
+
+        this.map = undef;
+        delete this.map;
+        this.meterBounds = undef;
+        delete this.meterBounds;
+        this.pixelBounds = undef;
+        delete this.pixelBounds;
+
+        delete this.viewRectPosition;
+        delete this.latLngBounds;
+        delete this.img;
+
+        this.eventEmitter.removeAllListeners();
+        delete this.eventEmitter;
+
+    }
+
     var _p = Tile.prototype;
     _p.constructor = Tile;
 
@@ -1360,6 +1403,7 @@ module.exports = function()
     _p.containsLatLng = containsLatLng;
     _p.isContained = isContained;
     _p.intersect = intersect;
+    _p.dispose = dispose;
 
     Tile.ON_TILE_LOADED = 0;
 

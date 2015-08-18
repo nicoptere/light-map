@@ -3,110 +3,133 @@
 <head lang="en">
     <meta charset="UTF-8">
     <title></title>
+    <style>
+        body{
+            font-family: 'Gotham SSm A', 'Gotham SSm B', "Verdana", sans-serif;
+            font-size: .85em;
+        }
+        fieldset
+        {
+            width:250px;
+        }
+    </style>
 </head>
+
 <body>
 
     <script src="light-map.js"></script>
+    <fieldset>
 
+        <legend>settings</legend>
+
+        <label for="provider">TMS provider</label><br>
+        <select id="provider" onchange="onChange(this)" style="width: 100%">
+            <option id="osm" data-url="http://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" data-domains="a,b,c" selected>OSM</option>
+            <option id="mq" data-url="http://ttiles{s}.mqcdn.com/tiles/1.0.0/vy/sat/{z}/{x}/{y}.png" data-domains="01,02,03,04">MapQuest</option>
+        </select>
+
+        <hr>
+
+        <label for="lat">latitude</label><br>
+        <input id="lat" type="range" min="-85" max="85" step=".00001" value="0" style="width: 100%" onchange="onChange(this)" oninput="onChange(this)">
+
+        <label for="lon">longitude</label><br>
+        <input id="lon" type="range" min="-180" max='180' step=".00001" value="0" style="width: 100%" onchange="onChange(this)" oninput="onChange(this)">
+
+        <label for="zoom">zoom level</label><br>
+        <input id="zoom" type="range" min="1" max="18" step="1" value="1" style="width: 100%" onchange="onChange(this)" oninput="onChange(this)">
+
+        <hr>
+
+        <label for="width">width</label><br>
+        <input id="width" type="range" min="1" max="1024" step="1" value="512" style="width: 100%" onchange="onChange(this)" oninput="onChange(this)">
+
+        <label for="height">height</label><br>
+        <input id="height" type="range" min="1" max="1024" step="1" value="512" style="width: 100%" onchange="onChange(this)" oninput="onChange(this)">
+
+        <hr>
+        <fieldset>
+
+            <legend>loading status</legend>
+            <progress id="progress" max="0" valu="0"></progress>
+
+        </fieldset>
+
+
+
+        </fieldset>
     <script>
 
+        function setProvider()
+        {
 
-        // provider: URL of the tile map service
-        // domains: URL of the domains used by the tile map service
-        // you can choose from a list of *free* TMS providers:
-        // http://leaflet-extras.github.io/leaflet-providers/preview/
-        // example:
-        //
-        //        provider = "http://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png";
-        //        domains = [ "a", "b", "c" ];
-        //
-        //alternately you can use mbtiles
+            var e = document.getElementById("provider");
+            var provider = e.options[e.selectedIndex];
+            if( map.provider != provider.getAttribute( "data-url" ) )
+            {
+                map.dispose();
+                map.provider = provider.getAttribute( "data-url" );
+                map.domains = provider.getAttribute( "data-domains").split( "," );
+            }
 
-        var provider, domains;
-        provider = "http://ttiles{s}.mqcdn.com/tiles/1.0.0/vy/sat/{z}/{x}/{y}.png";
-        domains = [ "01" , "02", "03", "04" ];
+        }
 
+        function onChange()
+        {
 
-        // we often need to use a proxy to load images on local servers
-        // check out this gist : https://gist.github.com/nicoptere/a23ffae9ed51a5ca9766
-        var proxy = "./proxy.php?url=";
+            //sets the TMS provider
+            setProvider();
 
-        var map = new Map( proxy + provider, domains, 512,512, 0, 18 );
+            //sets the coordinates of the center of the map
+            map.latitude = document.getElementById("lat").value;
+            map.longitude = document.getElementById("lon").value;
+            map.zoom = document.getElementById("zoom").value;
+
+            //sets the size of the map
+            if( document.getElementById("width").value != map.width ||  document.getElementById("height").value != map.height )
+            {
+                map.setViewRect( 0,0, document.getElementById("width").value, document.getElementById("height").value );
+            }
+
+            map.setView();
+
+        }
+
+        var map = new Map( "", "", 512,512, 0, 18 );
         document.body.appendChild( map.canvas );
 
-
+        //sets the TMS provider
+        setProvider();
 
         //listening to the loading events
 
-        //all tiles were loaded
         function onLoadComplete( status )
         {
             if(status==0 )
             {
-                console.log( "onLoadComplete", "->", status );
+                document.getElementById( "progress").max = map.loadedTiles.length;
+                document.getElementById( "progress").value = map.loadedTiles.length;
             }
         }
 
         //a new tile was loaded here
         function onTileLoaded( tile )
         {
-            console.log( "onTileLoaded", "->", tile );
-        }
-
-        //the canvas' context is returned here
-        function onTextureUpdate( ctx )
-        {
-            //console.log( "onTextureUpdate" );
+            document.getElementById( "progress").max = map.loadedTiles.length;
+            document.getElementById( "progress").value = map.loadedTiles.length - map.tiles.length;
         }
 
         map.eventEmitter.on( Map.ON_LOAD_COMPLETE, onLoadComplete );
         map.eventEmitter.on( Map.ON_TILE_LOADED, onTileLoaded );
-        map.eventEmitter.on( Map.ON_TEXTURE_UPDATE, onTextureUpdate );
-
-
 
         //this would be where I live :)
-        var lat = o_lat = 48.854777;
-        var lon = o_lon = 2.317499;
-        var zoom = 16;
+        var lat = 0;
+        var lon = 0;
+        var zoom = 1;
         map.setView( lat, lon, zoom );
 
-        //it can be done in a loop
-        function update(){
-
-            var t = ( Math.sin( Date.now() * 0.001 ) );
-
-            lat = o_lat;
-            lon = o_lon + t * .0025;
-
-            map.setView( lat, lon, zoom );
-
-        }
-        setInterval( update, 1000 / 60 );
-
-        // and as the result is a canvas, it's possible
-        // to add post processing to map.ctx
-        ///*
-
-        function postProcess( ctx )
-        {
-
-            /*
-            //adding grain: computationnaly expensive, avoid in loops
-            var imgData = ctx.getImageData(0,0,map.width, map.height );
-            var data = imgData.data;
-
-            var noise = 100;
-            for( var i = 0; i < data.length; i+= 4 )
-            {
-                var grain = ~~( (.5 - Math.random() ) * 2 * noise );
-                data[ i ]       += grain;
-                data[ i + 1 ]   += grain;
-                data[ i + 2 ]   += grain;
-            }
-            imgData.data = data;
-            ctx.putImageData( imgData, 0,0 );
-            //*/
+        //postprocess
+        function vignette( ctx ) {
 
             //create a vignette
             var w2 = map.width / 2;
@@ -121,7 +144,25 @@
             ctx.fillRect(0, 0, map.width, map.height );
 
         }
-        map.eventEmitter.on( Map.ON_TEXTURE_UPDATE, postProcess );
+//        map.eventEmitter.on( Map.ON_TEXTURE_UPDATE, vignette );
+
+        function grain(){
+
+            //adding grain: computationnaly expensive, avoid in loops
+            var imgData = map.ctx.getImageData(0,0,map.width, map.height );
+            var data = imgData.data;
+            var noise = 100;
+            for( var i = 0; i < data.length; i+= 4 )
+            {
+                var grain = ~~( (.5 - Math.random() ) * 2 * noise );
+                data[ i ]       += grain;
+                data[ i + 1 ]   += grain;
+                data[ i + 2 ]   += grain;
+            }
+            imgData.data = data;
+            map.ctx.putImageData( imgData, 0,0 );
+
+        }
 
 
     </script>
