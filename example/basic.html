@@ -26,12 +26,7 @@
         provider = "http://ttiles{s}.mqcdn.com/tiles/1.0.0/vy/sat/{z}/{x}/{y}.png";
         domains = [ "01" , "02", "03", "04" ];
 
-
-        // we often need to use a proxy to load images on local servers
-        // check out this gist : https://gist.github.com/nicoptere/a23ffae9ed51a5ca9766
-        var proxy = "./proxy.php?url=";
-
-        var map = new Map( proxy + provider, domains, 512,512, 0, 18 );
+        var map = new Map( provider, domains, 512,512, 0, 18 );
         document.body.appendChild( map.canvas );
 
         //listening to the loading events
