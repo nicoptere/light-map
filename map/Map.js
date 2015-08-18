@@ -9,7 +9,7 @@ module.exports = function(){
     function Map( provider, domains, width, height, minZoom, maxZoom ){
 
         this.mercator = mercator;
-        
+
         this.provider = provider || "http://{s}.tile.openstreetmap.org/{x}/{y}/{z}.png";
         this.domains = domains || ["a","b", "c"];
 
@@ -36,7 +36,11 @@ module.exports = function(){
         //create domElement if running in DOM
         this.isNode = ( typeof window === 'undefined' );
         if( !this.isNode ){
-            this.createDomElements();
+
+            this.canvas = document.createElement("canvas");
+            this.canvas.width  = this.viewRect.w;
+            this.canvas.height = this.viewRect.h;
+            this.ctx = this.canvas.getContext("2d");
         }
 
         //events
@@ -47,36 +51,13 @@ module.exports = function(){
     //getters / setters
     Map.prototype = {
 
-        get name(){return this._name; }, set name( value ){this._name = value; this.container.id = value; },
+        //get name(){return this._name; }, set name( value ){this._name = value; this.container.id = value; },
         get width(){return this._width; }, set width( value ){this._width = value; this.setViewRect(0,0,this.width, this.height ); },
         get height(){return this._height; }, set height( value ){this._height = value; this.setViewRect(0,0,this.width, this.height ); },
         get minZoom(){return this._minZoom; }, set minZoom( value ){this._minZoom = value; },
         get maxZoom(){return this._maxZoom; }, set maxZoom( value ){this._maxZoom = value; }
 
     };
-
-
-    //append the map to a DOM node
-    function createDomElements()
-    {
-
-        this.container = document.createElement("div");
-        this._name = this.container.id = "mapContainer";
-
-        this.canvas = document.createElement("canvas");
-        this.canvas.width  = this.viewRect.w;
-        this.canvas.height = this.viewRect.h;
-        this.ctx = this.canvas.getContext("2d");
-        this.container.appendChild(this.canvas);
-
-        this.domElement = document.createElement("div");
-        this.domElement.style.position = "absolute";
-        this.domElement.style.top = "0";
-        this.domElement.style.left = "0";
-        //this.domElement.style.visibility = "hidden";
-
-    }
-
 
     function setViewRect( x,y,w,h )
     {
@@ -85,7 +66,6 @@ module.exports = function(){
 
             this.canvas.width  = this.viewRect.w;
             this.canvas.height = this.viewRect.h;
-
         }
     }
 
@@ -97,31 +77,15 @@ module.exports = function(){
         this.ctx.clearRect( 0, 0, this.viewRect.w, this.viewRect.h );
 
         var c = this.getViewRectCenterPixels();
-
-        var children = this.domElement.getElementsByTagName( "img" );
-        for( var i = 0; i < children.length; i++ )
+        var ctx = this.ctx;
+        var viewRect = this.viewRect;
+        this.loadedTiles.forEach(function(tile)
         {
+            var px = viewRect.x  +  viewRect.w / 2 + ( tile.px - c[ 0 ] );
+            var py = viewRect.y  +  viewRect.h / 2 + ( tile.py - c[ 1 ] );
+            ctx.drawImage( tile.img, Math.round( px ), Math.round( py ) );
+        });
 
-            var tile = children[ i ].tile;
-            if( tile.zoom == this.zoom )
-            {
-
-                var px = this.viewRect.x  + this.viewRect.w / 2 + ( tile.px - c[ 0 ] );
-                var py = this.viewRect.y  + this.viewRect.h / 2 + ( tile.py - c[ 1 ] );
-
-                tile.img.style.position = "absolute";
-                tile.img.style.left = px +"px";
-                tile.img.style.top  = py +"px";
-
-                tile.localX = px;
-                tile.localY = py;
-
-                this.ctx.drawImage( tile.img, Math.round( px ), Math.round( py ) );
-
-            }
-        }
-
-        //this.onTextureUpdate.dispatch( ctx );
         this.eventEmitter.emit( Map.ON_TEXTURE_UPDATE, this.ctx );
 
     }
@@ -326,13 +290,14 @@ module.exports = function(){
     {
 
         var scope = tile.map;
+        scope.tiles.splice( scope.tiles.indexOf( tile ), 1 );
 
         var img = tile.img;
-        scope.domElement.appendChild( img );
-        scope.tiles.splice( scope.tiles.indexOf( tile ), 1 );
+        //scope.domElement.appendChild( img );
         scope.loadedTiles.push( tile );
 
         scope.locateTiles( true );
+
         scope.eventEmitter.emit( Map.ON_TILE_LOADED, tile );
 
         if( scope.tiles.length == 0 ){
@@ -369,7 +334,6 @@ module.exports = function(){
     var _p = Map.prototype;
     _p.constructor = Map;
 
-    _p.createDomElements        = createDomElements;
     _p.setViewRect             = setViewRect;
     _p.locateTiles             = locateTiles;
     _p.latLngToPixels          = latLngToPixels;

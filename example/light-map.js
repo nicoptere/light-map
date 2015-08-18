@@ -638,7 +638,6 @@ module.exports = function(){
     var _p = Map.prototype;
     _p.constructor = Map;
 
-    _p.createDomElements        = createDomElements;
     _p.setViewRect             = setViewRect;
     _p.locateTiles             = locateTiles;
     _p.latLngToPixels          = latLngToPixels;
@@ -1212,14 +1211,14 @@ module.exports = function()
     function load( callback )
     {
 
-        if( !this.map.isNode ){
+        if( this.map.isNode ){
 
             this.eventEmitter.emit( Tile.ON_TILE_LOADED, this );
             return;
         }
 
         var scope = this;
-        //this.img.tile = this;
+        this.img.tile = this;
         this.img.crossOrigin = 'anonymous';
         this.img.onload = function (e) {
             scope.loaded = true;

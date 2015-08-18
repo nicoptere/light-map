@@ -51,14 +51,15 @@ module.exports = function()
         this.px = -1;
         this.py = -1;
 
+        //raster position (tile position relative to the canvas)
+        this.rx = 0;
+        this.ry = 0;
+
         this.viewRectPosition = [0,0];
         this.latLngBounds = undef;
 
         this.img = ( this.map.isNode ) ? {} : new Image();
         this.url = "";
-
-        this.localX = 0;
-        this.localY = 0;
 
         this.eventEmitter = new events.EventEmitter();
 
@@ -117,6 +118,12 @@ module.exports = function()
     function load( callback )
     {
 
+        if( this.map.isNode ){
+
+            this.eventEmitter.emit( Tile.ON_TILE_LOADED, this );
+            return;
+        }
+
         var scope = this;
         this.img.tile = this;
         this.img.crossOrigin = 'anonymous';
@@ -124,15 +131,8 @@ module.exports = function()
             scope.loaded = true;
             scope.eventEmitter.emit( Tile.ON_TILE_LOADED, scope );
         };
-        if( !this.map.isNode )
-        {
-            this.img.setAttribute("key", this.key);
-            this.img.src = this.url;
-            this.img.style.borderColor = "red";
-            this.img.style.borderStyle = "solid";
-            this.img.style.borderWidth = "1px";
-        }
-
+        this.img.setAttribute("key", this.key);
+        this.img.src = this.url;
     }
 
     function getMapUrl(x, y, zl)
