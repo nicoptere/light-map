@@ -3,18 +3,12 @@ light map
 
 minimal, lightweight, self contained TMS viewer with a 2d canvas renderer.
 
-### Installation ###
-```
-npm install light-map --save
-```
-
-### more info ###
-[explanation and examples](http://nicoptere.github.io/light-map/)
-
-
 ### live example ###
 - [an example with the most common methods](http://nicoptere.github.io/light-map/example/) let's you set the lat/lon/zoom, change the width/height of the canvas and monitor the load progress.
 - as the map output is a Canvas2D, [this is an example with a fixed setup](http://nicoptere.github.io/light-map/example/basic.html) that shows how to post process the output (adding a vignette).
+
+### more info ###
+[explanation and examples](http://nicoptere.github.io/light-map/)
 
 ### basic example ###
 
@@ -118,7 +112,10 @@ npm install light-map --save
 
 ```
 
-### additional information ###
+### Installation ###
+```
+npm install light-map --save
+```
 
 ### related ###
 [Python library to perform Mercator conversions](http://www.maptiler.org/google-maps-coordinates-tile-bounds-projection/)
