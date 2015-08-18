@@ -8,7 +8,25 @@ minimal, lightweight, self contained TMS viewer with a 2d canvas renderer.
 npm install light-map --save
 ```
 
-### Basic Usage Example ###
+### more info ###
+[explanation and examples](http://nicoptere.github.io/light-map/)
+
+### basic example ###
+
+```js
+<script src="light-map.min.js"></script>
+
+<script>
+    var provider = "http://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png";
+    var domains = "a,b,c".split( ',' );
+    var map = new Map( provider, domains, 512,512,0,18 );
+    document.body.appendChild( map.canvas );
+    map.setView(0,0,1);
+</script>
+
+```
+
+### more advanced example ###
 
 ```js
 <script src="light-map.min.js"></script>
