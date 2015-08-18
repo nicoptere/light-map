@@ -728,7 +728,7 @@ module.exports = function(){
     function dispose()
     {
         var scoep = this;
-        this.tiles.forEach( function(tile){ tile.eventEmitter.remove( Tile.ON_TILE_LOADED, scope.appendTile ); tile.dispose(); });
+        this.tiles.forEach( function(tile){ tile.eventEmitter.removeListener( Tile.ON_TILE_LOADED, scope.appendTile ); tile.dispose(); });
         this.loadedTiles.forEach( function(tile){ tile.dispose(); });
 
         this.tiles = [];

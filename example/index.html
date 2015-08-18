@@ -15,7 +15,13 @@
             background-color: white;
             position: absolute;
         }
-
+        #map
+        {
+            position: absolute;
+            top:1em;
+            left:300px;
+            background-color: #eeeeee;
+        }
     </style>
 </head>
 
@@ -28,9 +34,16 @@
 
         <label for="provider">TMS provider</label><br>
         <select id="provider" onchange="onChange()" style="width: 100%">
-            <option id="osm" data-url="http://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" data-domains="a,b,c" selected>OSM</option>
+            <option id="stamen" data-url="http://stamen-tiles-{s}.a.ssl.fastly.net/watercolor/{z}/{x}/{y}.png" data-domains="a,b,c" selected>Stamen</option>
+            <option id="osm" data-url="http://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" data-domains="a,b,c" >OSM</option>
             <option id="mq" data-url="http://ttiles{s}.mqcdn.com/tiles/1.0.0/vy/sat/{z}/{x}/{y}.png" data-domains="01,02,03,04">MapQuest</option>
         </select>
+
+        <fieldset>
+            <legend>copyright</legend>
+            <div id="copyright"></div>
+
+        </fieldset>
 
         <hr>
 
@@ -66,6 +79,12 @@
 
     <script>
 
+        var copyrights = [
+            "Map tiles by <a href=\"http://stamen.com\">Stamen Design</a>, <a href=\"http://creativecommons.org/licenses/by/3.0\">CC BY 3.0</a> &mdash; Map data &copy; <a href=\"http://www.openstreetmap.org/copyright\">OpenStreetMap</a>",
+            "&copy; <a href=\"http://www.openstreetmap.org/copyright\">OpenStreetMap</a>"  ,
+            "Tiles Courtesy of <a href=\"http://www.mapquest.com/\">MapQuest</a> &mdash; Portions Courtesy NASA/JPL-Caltech and U.S. Depart. of Agriculture, Farm Service Agency', subdomains: '1234'"
+        ]
+
         function setProvider()
         {
 
@@ -76,6 +95,7 @@
                 map.dispose();
                 map.provider = provider.getAttribute( "data-url" );
                 map.domains = provider.getAttribute( "data-domains").split( "," );
+                document.getElementById( 'copyright').innerHTML = copyrights[ e.selectedIndex ];
             }
 
         }
@@ -107,7 +127,7 @@
 
                 map.latitude  = document.getElementById("lat").value = position.coords.latitude;
                 map.longitude = document.getElementById("lon").value = position.coords.longitude;
-                map.zoom = document.getElementById("zoom").value = 18;
+                map.zoom = document.getElementById("zoom").value = 17;
                 map.setView();
             };
             navigator.geolocation.getCurrentPosition(geoSuccess);
@@ -122,18 +142,19 @@
                 document.getElementById( "progress").value = map.loadedTiles.length;
             }
         }
-
         function onTileLoaded( tile )
         {
             document.getElementById( "progress").max = map.loadedTiles.length;
             document.getElementById( "progress").value = map.loadedTiles.length - map.tiles.length;
         }
-        
+
         //init the map
         var map = new Map( "", "", 512,512, 0, 18 );
+
+        map.canvas.id = "map";
         document.body.appendChild( map.canvas );
 
-        //sets the TMS provider
+        //sets the default TMS provider
         setProvider();
 
         //load the view
