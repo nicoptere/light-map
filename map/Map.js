@@ -69,7 +69,7 @@ module.exports = function(){
         this.setView(this.latitude, this.longitude, this.zoom );
     }
 
-    function locateTiles()
+    function renderTiles()
     {
         if( this.isNode )return;
 
@@ -88,17 +88,6 @@ module.exports = function(){
 
         this.eventEmitter.emit( Map.ON_TEXTURE_UPDATE, this.ctx );
 
-    }
-
-    function latLngToPixels( lat, lng, zoom ){
-
-        var tl = this.getViewRctTopLeft();
-        var offset = mercator.latLngToPixels( -tl[0], tl[1], zoom );
-        var point = mercator.latLngToPixels( lat, lng, zoom );
-        return{
-            x: point[0]-offset[0],
-            y: -( point[1]-offset[1] )
-        };
     }
 
     /**
@@ -208,6 +197,11 @@ module.exports = function(){
         return null;
     }
 
+    /**
+     * returns the X / Y index of the top left tile in the view rect
+     * @param zoom
+     * @returns {*[]}
+     */
     function viewRectTilesDelta(zoom)
     {
         zoom = zoom || this.zoom;
@@ -221,6 +215,11 @@ module.exports = function(){
         return [ bounds[0], bounds[1], u, v ];
     }
 
+    /**
+     * retrieves a list of tiles (loaded or not) that lie within the viewrect
+     * @param zoom
+     * @returns {Array}
+     */
     function viewRectTiles( zoom )
     {
         zoom = zoom || this.zoom;
@@ -236,14 +235,34 @@ module.exports = function(){
             for (var j = tl[1]; j <= br[1]; j++)
             {
                 var key = mercator.tileXYToQuadKey(i, j, zoom);
-                for (var k = 0; k < this.loadedTiles.length; k++)
-                {
-                    if (this.loadedTiles[k].key == key )
-                    {
+                var exists = false;
+                for (var k = 0; k < this.loadedTiles.length; k++){
+
+                    if (this.loadedTiles[k].key == key ){
+
                         this.loadedTiles[k].viewRectPosition[0] = u;
                         this.loadedTiles[k].viewRectPosition[1] = v;
                         tiles.push(this.loadedTiles[k]);
+                        exists = true;
                         break;
+                    }
+                }
+                if( exists == false ) {
+
+                    for (k = 0; k < this.tiles.length; k++) {
+
+                        if (this.tiles[k].key == key) {
+
+                            this.tiles[k].viewRectPosition[0] = u;
+                            this.tiles[k].viewRectPosition[1] = v;
+                            tiles.push(this.tiles[k]);
+                            exists = true;
+                            break;
+                        }
+                    }
+                    if (exists == false) {
+                        tiles.push(new Tile(this, key));
+                        this.keys.push(key);
                     }
                 }
                 v++;
@@ -300,7 +319,7 @@ module.exports = function(){
         this.longitude = lng;
         this.zoom = Math.max( this.minZoom, Math.min( this.maxZoom, zoom ) );
         this.load();
-        this.locateTiles();
+        this.renderTiles();
     }
 
     /**
@@ -338,7 +357,7 @@ module.exports = function(){
 
         var img = tile.img;
         scope.loadedTiles.push( tile );
-        scope.locateTiles( true );
+        scope.renderTiles( true );
 
         scope.eventEmitter.emit( Map.ON_TILE_LOADED, tile );
 
@@ -346,6 +365,18 @@ module.exports = function(){
 
             scope.eventEmitter.emit( Map.ON_LOAD_COMPLETE, 0 );
         }
+    }
+
+    /**
+     * returns a lat/lon as pixel X/Y coordinates
+     * @param lat
+     * @param lng
+     * @param zoom
+     * @returns {*}
+     */
+    function latLngToPixels( lat, lng, zoom )
+    {
+        return mercator.latLngToPixels( -lat, lng, zoom || this.zoom );
     }
 
     /**
@@ -388,7 +419,7 @@ module.exports = function(){
     _p.constructor = Map;
 
     _p.setViewRect             = setViewRect;
-    _p.locateTiles             = locateTiles;
+    _p.renderTiles             = renderTiles;
     _p.latLngToPixels          = latLngToPixels;
     _p.getCenter               = getCenter;
     _p.getCenterLatLng         = getCenterLatLng;
@@ -404,7 +435,7 @@ module.exports = function(){
     _p.viewRectTiles           = viewRectTiles;
     _p.getVisibleTiles         = getVisibleTiles;
     _p.load                    = load;
-    _p.appendTile            = appendTile;
+    _p.appendTile              = appendTile;
     _p.altitude                = altitude;
     _p.resolution              = resolution;
 
