@@ -101,16 +101,28 @@ module.exports = function(){
         };
     }
 
+    /**
+     * returns an array of the latitude/longitude in degrees
+     * @returns {*[]}
+     */
     function getCenter(){
 
         return [ this.latitude, this.longitude ];
     }
 
+    /**
+     * returns an object of the latitude/longitude in degrees
+     * @returns {*[]}
+     */
     function getCenterLatLng(){
 
         return { lat:this.latitude, lng:this.longitude };
     }
 
+    /**
+     * returns the bounds of the view rect as an array of the latitude/longitude in degrees
+     * @returns {*[top left lat, top left lon, bottom right lat, bottom right lon]}
+     */
     function viewRectToLatLng( lat, lng, zoom ){
 
         var c = mercator.latLngToPixels( -lat, lng, zoom  );
@@ -122,6 +134,10 @@ module.exports = function(){
 
     }
 
+    /**
+     * returns the bounds of the view rect as an object of the latitude/longitude in degrees
+     * @returns {*[left lon, top lat, right lon, bottom lat]}
+     */
     function getViewPortBounds()
     {
         var bounds = this.viewRectToLatLng( this.latitude, this.longitude, this.zoom );
@@ -134,50 +150,62 @@ module.exports = function(){
 
     }
 
+    /**
+     * returns the bounds of the view rect as rectangle (Rect object) of pixels in absolute coordinates
+     * @returns {*[absolute x, absolute y, width, height ]}
+     */
     function viewRectToPixels( lat, lng, zoom ){
 
         var c = mercator.latLngToPixels( -lat, lng, zoom  );
         return new Rect( c[ 0 ], c[ 1 ], this.viewRect.w, this.viewRect.h );
     }
 
+    /**
+     * returns an array of the latitude/longitude of the viewrect center in degrees
+     * @returns {*[]}
+     */
     function getViewRectCenter()
     {
         var bounds = viewRectToLatLng( this.latitude, this.longitude, this.zoom, this.viewRect);
         return [ mapUtils.map(.5,0,1, -bounds[0], -bounds[2] ), mapUtils.map(.5,0,1, bounds[1], bounds[3] )];
     }
 
+    /**
+     * returns an array of the absolute x/y coordinates of the viewrect center in pixels
+     * @returns {*[]}
+     */
     function getViewRectCenterPixels()
     {
         return mercator.latLngToPixels( -this.latitude, this.longitude, this.zoom );
     }
 
+    /**
+     * returns the absolute x/y coordinates of the viewrect top left corner in pixels
+     * @returns {*[]}
+     */
     function getViewRctTopLeft()
     {
-
         var c = mercator.latLngToPixels( -this.latitude, this.longitude, this.zoom  );
         var w = this.viewRect.w;
         var h = this.viewRect.h;
         return mercator.pixelsToLatLng( c[ 0 ] - w / 2, c[ 1 ] - h / 2, this.zoom );
-
     }
 
-    //retrieves a tile by its quadkey
-    //@param key
+    /**
+     * retrieves a tile by its quadkey
+     * @param key
+     * @returns {*}
+     */
     function getTileByKey( key )
     {
         for( var k = 0; k < this.tiles.length; k++ )
         {
             if( this.tiles[ k ].key == key )
             {
-                return this.tiles[ k ]
+                return this.tiles[ k ];
             }
         }
         return null;
-    }
-
-    function getEarthTiles( zoom )
-    {
-        return this.viewRectTiles(zoom).concat( this.viewRectTiles(zoom-1)).concat( this.viewRectTiles(zoom+1));
     }
 
     function viewRectTilesDelta(zoom)
@@ -225,6 +253,14 @@ module.exports = function(){
         return tiles;
     }
 
+    /**
+     * gets a list of the tiles that are displayed in the viewrect at the given lat/lon/zoom
+     * @param lat latitude in degrees
+     * @param lng longitude in degrees
+     * @param zoom zoom level
+     * @param viewRect
+     * @returns {Array} an array of Tile objects
+     */
     function getVisibleTiles( lat, lng, zoom, viewRect )
     {
 
@@ -262,11 +298,14 @@ module.exports = function(){
     {
         this.latitude = lat;
         this.longitude = lng;
-        this.zoom = zoom;
+        this.zoom = Math.max( this.minZoom, Math.min( this.maxZoom, zoom ) );
         this.load();
         this.locateTiles();
     }
 
+    /**
+     * loads the visibles tiles
+     */
     function load()
     {
 
@@ -279,21 +318,21 @@ module.exports = function(){
         }
 
         for ( var i = 0; i < tiles.length; i++ ) {
-            tiles[ i ].eventEmitter.on( Tile.ON_TILE_LOADED, this.addTileToDom  );
+            tiles[ i ].eventEmitter.on( Tile.ON_TILE_LOADED, this.appendTile  );
             tiles[ i ].load();
         }
+
         this.tiles = this.tiles.concat( tiles );
 
     }
 
-    function addTileToDom( tile )
+    function appendTile( tile )
     {
 
         var scope = tile.map;
         scope.tiles.splice( scope.tiles.indexOf( tile ), 1 );
 
         var img = tile.img;
-        //scope.domElement.appendChild( img );
         scope.loadedTiles.push( tile );
 
         scope.locateTiles( true );
@@ -347,12 +386,11 @@ module.exports = function(){
     _p.getViewRctTopLeft       = getViewRctTopLeft;
     _p.setView                 = setView;
     _p.getTileByKey            = getTileByKey;
-    _p.getEarthTiles           = getEarthTiles;
     _p.viewRectTilesDelta      = viewRectTilesDelta;
     _p.viewRectTiles           = viewRectTiles;
     _p.getVisibleTiles         = getVisibleTiles;
     _p.load                    = load;
-    _p.addTileToDom            = addTileToDom;
+    _p.appendTile            = appendTile;
     _p.altitude                = altitude;
     _p.resolution              = resolution;
 

@@ -130,9 +130,8 @@ npm install light-map --save
 </script>
 
 ```
-it should look like this:<br>
+it should look like this (and move from left to right):<br>
 <img src="https://github.com/nicoptere/light-map/blob/master/example/light-map.jpg">
-<script>console.log( "howdy!");</script>
 ### additional information ###
 
 [Python library to perform Mercator conversions](http://www.maptiler.org/google-maps-coordinates-tile-bounds-projection/)
