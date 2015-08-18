@@ -112,7 +112,7 @@ minimal, lightweight, self contained TMS viewer with a 2d canvas renderer.
 
 ```
 
-### Installation ###
+### npm module installation ###
 ```
 npm install light-map --save
 ```
