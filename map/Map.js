@@ -6,13 +6,12 @@ var events = require('events');
 
 module.exports = function(){
 
-    function Map( provider, domains, width, height, minZoom, maxZoom )
-    {
+    function Map( provider, domains, width, height, minZoom, maxZoom ){
 
+        this.mercator = mercator;
+        
         this.provider = provider || "http://{s}.tile.openstreetmap.org/{x}/{y}/{z}.png";
         this.domains = domains || ["a","b", "c"];
-
-        this.tileSize = mercator.tileSize;
 
         this._width = width || mercator.tileSize;
         this._height = height || mercator.tileSize;

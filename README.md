@@ -130,7 +130,7 @@ npm install light-map --save
 </script>
 
 ```
-it should look like this:
+it should look like this:<br>
 <img src="https://github.com/nicoptere/light-map/blob/master/example/light-map.jpg">
 
 ### additional information ###

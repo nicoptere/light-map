@@ -197,8 +197,6 @@ module.exports = function( exports )
     //resolution (meters/pixel) for given zoom level (measured at Equator)
     function resolution( zoom )
     {
-        //return (2 * Math.PI * 6378137) / (self.tileSize * 2 **zoom)
-        //?...//return ( 2 * Math.PI * earth_radius / tileSize ) / ( tileSize * Math.pow( 2, zoom ) );
         return initialResolution / Math.pow( 2, zoom );
     }
 
@@ -267,7 +265,7 @@ module.exports = function( exports )
         return metersToTile( meters[ 0 ], meters[ 1 ], zoom );
     }
 
-    //encodes the tlie X / Y coordinates into a quadkey
+    //encodes the tlie X / Y coordinates & zoom level into a quadkey
     function tileXYToQuadKey( tx,ty,zoom )
     {
         var quadKey = '';
@@ -289,6 +287,7 @@ module.exports = function( exports )
         return quadKey;
     }
 
+    //decodes the tlie X / Y coordinates & zoom level into a quadkey
     function quadKeyToTileXY( quadKeyString )
     {
         var tileX = 0;
