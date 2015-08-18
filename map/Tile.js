@@ -137,13 +137,15 @@ module.exports = function()
 
     function getMapUrl(x, y, zl)
     {
-        var domains = this.map.domains || ["a", "b", "c"];
-
         var url = this.map.provider;
         url = url.replace(/\{x\}/, x);
         url = url.replace(/\{y\}/, y);
         url = url.replace(/\{z\}/, zl);
-        url = url.replace(/\{s\}/, domains[ parseInt( Math.random() * domains.length ) ] );
+
+        if( url.lastIndexOf("{s}") != -1  ){
+            var domains = this.map.domains || [""];
+            url = url.replace(/\{s\}/, domains[ parseInt( Math.random() * domains.length ) ] );
+        }
         return url;
     }
 

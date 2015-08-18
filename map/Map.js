@@ -31,7 +31,7 @@ module.exports = function(){
         this.loadedTiles = [];
 
         //viewRect
-        this.setViewRect( 0,0,this.width,this.height );
+        this.viewRect = new Rect( 0,0,this.width,this.height );
 
         //create domElement if running in DOM
         this.isNode = ( typeof window === 'undefined' );
@@ -51,7 +51,6 @@ module.exports = function(){
     //getters / setters
     Map.prototype = {
 
-        //get name(){return this._name; }, set name( value ){this._name = value; this.container.id = value; },
         get width(){return this._width; }, set width( value ){this._width = value; this.setViewRect(0,0,this.width, this.height ); },
         get height(){return this._height; }, set height( value ){this._height = value; this.setViewRect(0,0,this.width, this.height ); },
         get minZoom(){return this._minZoom; }, set minZoom( value ){this._minZoom = value; },
@@ -67,6 +66,7 @@ module.exports = function(){
             this.canvas.width  = this.viewRect.w;
             this.canvas.height = this.viewRect.h;
         }
+        this.setView(this.latitude, this.longitude, this.zoom );
     }
 
     function locateTiles()
