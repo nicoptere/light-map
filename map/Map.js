@@ -70,7 +70,7 @@ module.exports = function(){
         this.viewRect = new Rect( x,y,w,h );
         this._width = w;
         this._height = h;
-        if( this.canvas != null ) this.updateCanvas();
+        if( this.canvas != null )this.updateCanvas();
         this.setView(this.latitude, this.longitude, this.zoom );
     }
 	
@@ -89,7 +89,7 @@ module.exports = function(){
         var ctx = this.ctx;
 		ctx.save();
         ctx.clearRect( 0, 0, this._width, this._height );
-		ctx.scale(this._scale, this._scale);
+		if( this._scale != 1 )ctx.scale(this._scale, this._scale);
 
         var c = this.getViewRectCenterPixels();
         var zoom = this.zoom;
