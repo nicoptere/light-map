@@ -106,6 +106,8 @@ module.exports = function()
         this.pixelBounds = mercator.tilePixelsBounds(this.tx, this.ty, this.zoom);
         this.px = this.pixelBounds[0];
         this.py = this.pixelBounds[1];
+		this.w = this.pixelBounds[2] - this.px;
+		this.h = this.pixelBounds[3] - this.py;
 
         this.latLngBounds = mercator.tileLatLngBounds(this.tx, this.ty, this.zoom);
         this.latLngBounds[0] *= -1;

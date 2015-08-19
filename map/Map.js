@@ -6,7 +6,7 @@ var events = require('events');
 
 module.exports = function(){
 
-    function Map( provider, domains, width, height, minZoom, maxZoom ){
+    function Map( provider, domains, width, height, minZoom, maxZoom, scale ){
 
         this.mercator = mercator;
 
@@ -17,6 +17,7 @@ module.exports = function(){
         this._height = height || mercator.tileSize;
         this._minZoom = Math.max( 0, minZoom );
         this._maxZoom = Math.max( 1, maxZoom );
+		this._scale = scale || 1;
 
         //map center
         this.latitude   = 0;
@@ -38,8 +39,7 @@ module.exports = function(){
         if( !this.isNode ){
 
             this.canvas = document.createElement("canvas");
-            this.canvas.width  = this.viewRect.w;
-            this.canvas.height = this.viewRect.h;
+			this.updateCanvas();
             this.ctx = this.canvas.getContext("2d");
         }
 
@@ -70,22 +70,28 @@ module.exports = function(){
         this.viewRect = new Rect( x,y,w,h );
         this._width = w;
         this._height = h;
-        if( this.canvas != null ){
-
-            this.canvas.width  = this.viewRect.w;
-            this.canvas.height = this.viewRect.h;
-        }
+        if( this.canvas != null )this.updateCanvas();
         this.setView(this.latitude, this.longitude, this.zoom );
     }
+	
+	function updateCanvas()
+	{
+		this.canvas.width  = Math.round(this._width * this._scale);
+		this.canvas.height = Math.round(this._height * this._scale);
+		this.canvas.style.width = this._width + "px";
+		this.canvas.style.height = this._height + "px";
+	}
 
     function renderTiles()
     {
         if( this.isNode )return;
 
-        this.ctx.clearRect( 0, 0, this.viewRect.w, this.viewRect.h );
+        var ctx = this.ctx;
+		ctx.save();
+        ctx.clearRect( 0, 0, this._width, this._height );
+		if( this._scale != 1 )ctx.scale(this._scale, this._scale);
 
         var c = this.getViewRectCenterPixels();
-        var ctx = this.ctx;
         var zoom = this.zoom;
         var viewRect = this.viewRect;
         this.loadedTiles.forEach(function(tile)
@@ -94,9 +100,10 @@ module.exports = function(){
             {
                 var px = viewRect.x  +  viewRect.w / 2 + ( tile.px - c[ 0 ] );
                 var py = viewRect.y  +  viewRect.h / 2 + ( tile.py - c[ 1 ] );
-                ctx.drawImage( tile.img, Math.round( px ), Math.round( py ) );
+                ctx.drawImage( tile.img, Math.round( px ), Math.round( py ), tile.w, tile.h );
             }
         });
+		ctx.restore();
 
         this.eventEmitter.emit( Map.ON_TEXTURE_UPDATE, this.ctx );
 
@@ -423,7 +430,7 @@ module.exports = function(){
 
     function dispose()
     {
-        var scoep = this;
+        var scope = this;
         this.tiles.forEach( function(tile){ tile.eventEmitter.removeListener( Tile.ON_TILE_LOADED, scope.appendTile ); tile.dispose(); });
         this.loadedTiles.forEach( function(tile){ tile.dispose(); });
 
@@ -443,6 +450,7 @@ module.exports = function(){
     _p.constructor = Map;
 
     _p.setViewRect             = setViewRect;
+    _p.updateCanvas            = updateCanvas;
     _p.renderTiles             = renderTiles;
     _p.latLngToPixels          = latLngToPixels;
     _p.getCenter               = getCenter;

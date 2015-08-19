@@ -37,6 +37,7 @@
             <option id="osm" data-url="http://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" data-domains="a,b,c" selected>OSM</option>
             <option id="stamen" data-url="http://stamen-tiles-{s}.a.ssl.fastly.net/watercolor/{z}/{x}/{y}.png" data-domains="a,b,c" >Stamen</option>
             <option id="mq" data-url="http://ttiles{s}.mqcdn.com/tiles/1.0.0/vy/sat/{z}/{x}/{y}.png" data-domains="01,02,03,04">MapQuest</option>
+            <option id="toner" data-url="http://stamen-tiles-{s}.a.ssl.fastly.net/toner/{z}/{x}/{y}@2x.png" data-domains="a,b,c" >Toner Retina</option>
         </select>
 
         <fieldset>
@@ -82,7 +83,8 @@
         var copyrights = [
             "&copy; <a href=\"http://www.openstreetmap.org/copyright\">OpenStreetMap</a>"  ,
             "Map tiles by <a href=\"http://stamen.com\">Stamen Design</a>, <a href=\"http://creativecommons.org/licenses/by/3.0\">CC BY 3.0</a> &mdash; Map data &copy; <a href=\"http://www.openstreetmap.org/copyright\">OpenStreetMap</a>",
-            "Tiles Courtesy of <a href=\"http://www.mapquest.com/\">MapQuest</a> &mdash; Portions Courtesy NASA/JPL-Caltech and U.S. Depart. of Agriculture, Farm Service Agency', subdomains: '1234'"
+            "Tiles Courtesy of <a href=\"http://www.mapquest.com/\">MapQuest</a> &mdash; Portions Courtesy NASA/JPL-Caltech and U.S. Depart. of Agriculture, Farm Service Agency', subdomains: '1234'",
+            "Map tiles by <a href=\"http://stamen.com\">Stamen Design</a>, <a href=\"http://creativecommons.org/licenses/by/3.0\">CC BY 3.0</a> &mdash; Map data &copy; <a href=\"http://www.openstreetmap.org/copyright\">OpenStreetMap</a>"
         ];
 
         function setProvider()
@@ -148,8 +150,10 @@
             document.getElementById( "progress").value = map.loadedTiles.length - map.tiles.length;
         }
 
+		var scale = window.devicePixelRatio || 1;
+
         //init the map
-        var map = new Map( "", "", 512,512, 0, 18 );
+        var map = new Map( "", "", 512,512, 0, 18, scale );
 
         map.canvas.id = "map";
         document.body.appendChild( map.canvas );
