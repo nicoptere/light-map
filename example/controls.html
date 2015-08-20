@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html>
+<head lang="en">
+    <meta charset="UTF-8">
+
+    <title>light map utils</title>
+    <style>
+
+        body, html
+        {
+            width:100%;
+            height:100%;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+        }
+        #log{
+            position: absolute;
+            width:250px;
+            height:250px;
+            display: block;
+            padding: 1em;
+            margin: 0;
+            border:1px solid #eeeeee;
+            background-color: #FCFCFC;
+            visibility: hidden;
+            display: none;
+        }
+        canvas{
+            position: absolute;
+            /*margin: 0;*/
+            /*left: 300px;*/
+        }
+
+
+        #controls
+        {
+            position: absolute;
+            width:100px;
+            padding: 1em;
+        }
+
+        .btn,
+        .btn:visited{
+
+            color: #000000;
+            border:1px solid #eeeeee;
+            background-color: #FCFCFC;
+
+            display: inline-flex;
+            padding:.5em;
+            font-size: .65em;
+            text-decoration: none;
+            border-radius: 25%;
+
+            -o-transition:.5s;
+            -ms-transition:.5s;
+            -moz-transition:.5s;
+            -webkit-transition:.5s;
+            transition:.5s;
+        }
+        .btn:hover{
+            border:1px solid #BBBBBB;
+            background-color: #DDDDDD;
+            cursor: pointer;
+        }
+    </style>
+
+    <link rel="stylesheet" href="style.css">
+
+</head>
+<body>
+
+    <script src="light-map.min.js"></script>
+
+
+
+    <script>
+        var la = 48;
+        var lo = 5;
+        var s = 512;
+        var z = 1;
+        la = lo = 0;
+        var provider = "http://ttiles{s}.mqcdn.com/tiles/1.0.0/vy/sat/{z}/{x}/{y}.png";
+        var domains = "01,02,03,04".split( ',' );
+
+        provider = "http://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png";
+//        provider = "http://stamen-tiles-{s}.a.ssl.fastly.net/watercolor/{z}/{x}/{y}.png";
+//        provider = "http://ttiles{s}.mqcdn.com/tiles/1.0.0/vy/sat/{z}/{x}/{y}.png";
+        domains = "a,b,c".split( ',' );
+//        domains = "01,02,03,04".split( ',' );
+
+        var map = new Map( provider, domains, s,s,0,18 );
+        document.body.appendChild( map.canvas );
+        map.setSize(s,s);
+        map.setView(la,lo,z);
+
+
+        ////////////////////////////////////////////
+
+        // mouse handling
+
+        ////////////////////////////////////////////
+
+        var mouse = { x:0, y:0 };
+        var origin = { x:0, y:0 };
+        var delta = { x:0, y:0 };
+
+        var mouseDown = false;
+        function onMouseDown(e){
+
+            if (!e) e = window.event;
+            mouseDown = true;
+
+
+            origin.x = mouse.x;
+            origin.y = mouse.y;
+            var viewRect = map.viewRectToPixels( map.latitude, map.longitude, map.zoom );
+
+
+            var point = map.mercator.pixelsToLatLng( mouse.x + viewRect.x , mouse.y + viewRect.y, map.zoom );
+
+            console.log( point )
+//            console.log( map.mercator.pixelsToMeters( mouse.x, mouse.y, map.zoom ) )
+
+            e.preventDefault();
+        }
+        function onMouseUp(e){
+            if (!e) e = window.event;
+            mouseDown = false;
+
+            e.preventDefault();
+        }
+
+        function getMousePosition(e){
+
+            if (!e) e = window.event;
+
+
+            if (e.pageX || e.pageY) 	{
+                mouse.x = e.pageX;
+                mouse.y = e.pageY;
+            }
+            else if (e.clientX || e.clientY) 	{
+                mouse.x = e.clientX + document.body.scrollLeft + document.documentElement.scrollLeft;
+                mouse.y = e.clientY + document.body.scrollTop + document.documentElement.scrollTop;
+            }
+
+            var r = e.target.getBoundingClientRect();
+            mouse.x -= r.left;
+            mouse.y -= r.top;
+
+            delta.x = mouse.x - origin.x;
+            delta.y = -( mouse.y - origin.y );
+
+            e.preventDefault();
+
+        }
+
+        function getTouchPosition(e){
+
+            var touch = e.targetTouches[0];
+            var r = e.target.getBoundingClientRect();
+            mouse.x = touch.clientX - r.left;
+            mouse.y = touch.clientY - r.top;
+            e.preventDefault();
+
+        }
+
+        function resetMousePosition(e){
+
+            var r = e.target.getBoundingClientRect();
+            mouse.x = r.width * .5;
+            mouse.y = r.height * .5;
+
+        }
+
+        function onResize()
+        {
+//            map.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        map.canvas.addEventListener('mousemove', getMousePosition, false );
+        map.canvas.addEventListener('touchmove', getTouchPosition, false );
+        map.canvas.addEventListener('mouseleave', resetMousePosition, false );
+        map.canvas.addEventListener('touchend', resetMousePosition, false );
+        map.canvas.addEventListener('mousedown', onMouseDown, false );
+        map.canvas.addEventListener('touchstart', onMouseDown, false );
+        map.canvas.addEventListener('mouseup', onMouseUp, false );
+        map.canvas.addEventListener('touchend', onMouseUp, false );
+
+        window.addEventListener('resize', onResize, false );
+
+
+        ////////////////////////////////////////////
+
+        // end mouse handling
+
+        ////////////////////////////////////////////
+
+
+        var div ;
+        function update()
+        {
+            //drag
+            if( mouseDown )
+            {
+
+                var speed = .1;
+                var ratio = 1 / Math.pow( 2, map.zoom );
+
+                map.latitude  += speed * ratio * delta.y;
+                map.longitude += speed * ratio * delta.x;
+
+                map.latitude = Math.max( -85, Math.min( map.latitude, 85 ) );
+                map.longitude = Math.max( -180, Math.min( map.longitude, 180 ) );
+
+                map.setView();
+            }
+
+
+
+            if( div != null ) {
+
+                var px = map.mercator.pixelsToRaster( mouse.x, mouse.y, map.zoom );
+                var str = px.join(',') + "";
+
+//                str += "" + map.canvas.width + " " +  map.canvas.height+ "\n";
+//                str += "" + map.retina+ " " + map.canvas.style.width+ " " +  map.canvas.style.height+ "\n";
+
+
+                str += mouse.x +" "+ mouse.y + "\n";
+                str += delta.x +" "+ delta.y + "\n";
+                if( mouseDown == true )div.innerText = str;
+            }
+        }
+
+        function reset() {
+            map.latitude = map.longitude = map.zoom = 0;
+            map.setView();
+        }
+
+        function zoomIn() {
+            map.zoom++;
+            map.setView();
+        }
+
+        function zoomOut() {
+            map.zoom--;
+            map.setView();
+        }
+
+        function goHome()
+        {
+            var geoSuccess = function(position) {
+
+                map.latitude  = position.coords.latitude;
+                map.longitude = position.coords.longitude;
+                map.zoom = 17;
+                map.setView();
+            };
+            navigator.geolocation.getCurrentPosition(geoSuccess);
+        }
+
+        window.onload = function()
+        {
+            div = document.getElementById( "log" );
+            div.addEventListener('mousedown', reset, false );
+            div.addEventListener('touchstart', reset, false );
+
+            var zin = document.getElementById( "zoom-in" );
+            zin.addEventListener( 'mousedown', zoomIn, false );
+            zin.addEventListener('touchstart', zoomIn, false );
+
+            var zout = document.getElementById( "zoom-out" );
+            zout.addEventListener( 'mousedown', zoomOut, false );
+            zout.addEventListener('touchstart', zoomOut, false );
+
+            var loc = document.getElementById( "location" );
+            loc.addEventListener('mousedown', goHome, false );
+            loc.addEventListener('touchstart', goHome, false );
+
+
+            setInterval( update, 1000 / 60 );
+            onResize();
+        }
+
+
+
+
+    </script>
+
+    <div id="controls">
+
+        <span class="btn" id="zoom-in"><span class="light-map-plus"></span></span><br><br>
+        <span class="btn" id="zoom-out"><span class="light-map-minus"></span></span><br><br>
+        <span class="btn" id="location"><span class="light-map-location"></span></span>
+        <!--<span class="btn"><span class="light-map-up"></span></span>-->
+        <!--<span class="btn"><span class="light-map-down"></span></span>-->
+        <!--<span class="btn"><span class="light-map-left"></span></span>-->
+        <!--<span class="btn"><span class="light-map-right"></span></span>-->
+
+    </div>
+    <div id="log"></div>
+
+
+
+</body>
+</html>

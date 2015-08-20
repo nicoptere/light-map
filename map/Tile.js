@@ -1,6 +1,6 @@
 /*
 * Tile object, holds reference to:
-    *
+*
 *      tile top left lat/lon
 *      tile id
 *      tile X/Y
@@ -9,10 +9,11 @@
 *
 * + some helper methods ( contains, isContained, intersect )
 *
+* @param map the map this tile is bound to
 * @param quadKey optional, can be set with initFromQuadKey()
 * @constructor
 */
-var mercator = require( './Mercator' );
+
 var events = require( 'events' );
 module.exports = function()
 {
@@ -21,6 +22,7 @@ module.exports = function()
 
     /**
      * @param map Map instance this tile is associated with
+     * @param map the map this tile is bound to
      * @param quadKey the QuadKey of this Tile
      * @constructor
      */
@@ -75,20 +77,20 @@ module.exports = function()
 
     function initFromTileXY(x, y, zoom)
     {
-        var quadKey = mercator.tileXYToQuadKey(x, y, zoom);
+        var quadKey = this.map.mercator.tileXYToQuadKey(x, y, zoom);
         initFromQuadKey(quadKey);
     }
 
     function initFromQuadKey(quadKey)
     {
 
-        var tile = mercator.quadKeyToTileXY(quadKey);
+        var tile = this.map.mercator.quadKeyToTileXY(quadKey);
         if ( tile == undef) {
             this.valid = false;
             return;
         }
 
-        var center = mercator.tileLatLngBounds(this.tx + .5, this.ty + .5, this.zoom);
+        var center = this.map.mercator.tileLatLngBounds(this.tx + .5, this.ty + .5, this.zoom);
         this.lat = -center[0];
         this.lng = center[1];
 
@@ -99,15 +101,15 @@ module.exports = function()
         this.ty = tile.ty;
         this.zoom = tile.zoom;
 
-        this.meterBounds = mercator.tileMetersBounds( this.tx, this.ty, this.zoom);
+        this.meterBounds = this.map.mercator.tileMetersBounds( this.tx, this.ty, this.zoom);
         this.mx = this.meterBounds[0];
         this.my = this.meterBounds[1];
 
-        this.pixelBounds = mercator.tilePixelsBounds(this.tx, this.ty, this.zoom);
+        this.pixelBounds = this.map.mercator.tilePixelsBounds(this.tx, this.ty, this.zoom);
         this.px = this.pixelBounds[0];
         this.py = this.pixelBounds[1];
 
-        this.latLngBounds = mercator.tileLatLngBounds(this.tx, this.ty, this.zoom);
+        this.latLngBounds = this.map.mercator.tileLatLngBounds(this.tx, this.ty, this.zoom);
         this.latLngBounds[0] *= -1;
         this.latLngBounds[2] *= -1;
 

@@ -1,7 +1,7 @@
 light map
 =============
 
-minimal, lightweight, self contained TMS viewer with a 2d canvas renderer.
+minimal, lightweight, self contained XYZ tile map viewer with a 2d canvas renderer.
 
 ### live example ###
 - [an example with the most common methods](http://nicoptere.github.io/light-map/example/) let's you set the lat/lon/zoom, change the width/height of the canvas and monitor the load progress.
