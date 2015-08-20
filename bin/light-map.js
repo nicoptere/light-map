@@ -312,7 +312,6 @@ module.exports = function(){
 
     function Map( provider, domains, width, height, minZoom, maxZoom ){
 
-        this.utils = utils;
 
         //sets the scale of the map, handles retina display
         this.mercator = new Mercator( 256 );
@@ -336,26 +335,18 @@ module.exports = function(){
         this.keys = [];
         this.loadedTiles = [];
 
-        //create domElement if running in DOM
-        this.isNode = ( typeof window === 'undefined' );
-        if( !this.isNode ){
-
-            this.canvas = document.createElement("canvas");
-            this.ctx = this.canvas.getContext("2d");
-
-            // disable smoothing of retina scaled images (i.e. use a neirest-neighbour filter)
-            //this.ctx.imageSmoothingEnabled      = !this.retina;
-            //this.ctx.mozImageSmoothingEnabled   = !this.retina;
-            //this.ctx.msImageSmoothingEnabled    = !this.retina;
-        }
+        //create domElement
+        this.canvas = document.createElement("canvas");
+        this.ctx = this.canvas.getContext("2d");
 
         //viewRect
         this.setSize( width, height );
 
-
         //providers
-        this.setProvider( provider, domains, 256 * window.devicePixelRatio )
+        this.setProvider( provider, domains, 256 * window.devicePixelRatio );
 
+        //makes the math utils available
+        this.utils = utils;
     }
 
     //getters / setters
@@ -416,9 +407,7 @@ module.exports = function(){
         
     }
 
-    function renderTiles()
-    {
-        if( this.isNode )return;
+    function renderTiles() {
 
         this.ctx.clearRect( 0, 0, this.canvas.width, this.canvas.height );
 
@@ -482,16 +471,6 @@ module.exports = function(){
         };
 
     }
-
-    /**
-     * returns the bounds of the view rect as rectangle (Rect object) of pixels in absolute coordinates
-     * @returns new Rect( absolute x, absolute y, width, height )
-     */
-        //function viewRectToPixels( lat, lng, zoom ){
-        //
-        //    var c = this.mercator.latLngToPixels( -lat, lng, zoom  );
-        //    return new Rect( c[ 0 ]-this.viewRect.w/2, c[ 1 ]-this.viewRect.h/2, this.viewRect.w, this.viewRect.h );
-        //}
 
     /**
      * returns the bounds of the view rect as rectangle (Rect object) of pixels in absolute coordinates
@@ -601,8 +580,6 @@ module.exports = function(){
                 if( this.keys.indexOf( key ) == -1 )
                 {
                     var tile =  new Tile( this, key );
-
-                    console.log( "new Tile", tile.key, tile.zoom );
                     tiles.push( tile );
                     this.keys.push( key );
                 }
@@ -711,6 +688,16 @@ module.exports = function(){
 
     }
 
+    /**
+     * returns the bounds of the view rect as rectangle (Rect object) of pixels in absolute coordinates
+     * @returns {*[absolute x, absolute y, width, height ]}
+     */
+    function viewRectToPixels( lat, lng, zoom ){
+
+        var c = this.mercator.latLngToPixels( -lat, lng, zoom  );
+        return new Rect( c[ 0 ], c[ 1 ], this.viewRect.w, this.viewRect.h );
+    }
+
     //Map constants
     Map.ON_LOAD_COMPLETE    = 0;
     Map.ON_TILE_LOADED      = 1;
@@ -735,6 +722,7 @@ module.exports = function(){
     _p.appendTile              = appendTile;
     _p.resolution              = resolution;
     _p.dispose                 = dispose;
+    _p.viewRectToPixels = viewRectToPixels;
 
     return Map;
 
@@ -1246,7 +1234,7 @@ module.exports = function()
         this.viewRectPosition = [0,0];
         this.latLngBounds = undef;
 
-        this.img = ( this.map.isNode ) ? {} : new Image();
+        this.img = new Image();
         this.url = "";
 
         this.eventEmitter = new events.EventEmitter();
@@ -1305,13 +1293,6 @@ module.exports = function()
 
     function load( callback )
     {
-
-        if( this.map.isNode ){
-
-            this.eventEmitter.emit( Tile.ON_TILE_LOADED, this );
-            return;
-        }
-
         if( !this.valid )
         {
             console.log( "invalid tile, not loading");
@@ -1328,6 +1309,10 @@ module.exports = function()
             {
                 console.warn( 'loaded Tile has no associated map > ', scope.key, scope.zoom );
                 return;
+            }
+
+            if( scope.map.mercator.tileSize != e.target.width ){
+                scope.rescaleImage( e.target, scope.map.mercator.tileSize, window.devicePixelRatio );
             }
 
             scope.loaded = true;
