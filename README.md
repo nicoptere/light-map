@@ -5,8 +5,8 @@ minimal, lightweight, self contained XYZ tile map viewer with a 2d canvas render
 
 ### live example ###
 - [an example with the most common methods](http://nicoptere.github.io/light-map/example/) let's you set the lat/lon/zoom, change the width/height of the canvas and monitor the load progress.
-- [an example of retina support](http://nicoptere.github.io/light-map/example/retina.html) first I thought it wasn't much but it seems to be a big deal. it's based on the devicePixelRatio, ideally you should use a @2x provider but I did an internal nearest neighbour resize.
 - [a basic example of controls](http://nicoptere.github.io/light-map/example/controls.html) you should be able to drag the map around.
+- [an example of retina support](http://nicoptere.github.io/light-map/example/retina.html) first I thought it wasn't much but it seems to be a big deal. it's based on the devicePixelRatio, ideally you should use a @2x provider but I did an internal nearest neighbour resize.
 - [an example with a vignette](http://nicoptere.github.io/light-map/example/basic.html) as the map output is a Canvas2D, this shows how to post process the output.
 
 ### more info ###

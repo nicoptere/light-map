@@ -78,15 +78,26 @@
 
         ////////////////////////////////////////////
 
-        var mouse = { x:0, y:0 };
+        var mouse = { x:-1, y:-1};
         var origin = { x:0, y:0 };
-        var delta = { x:0, y:0 };
+        var delta = {x:0, y:0 };
 
         var mouseDown = false;
         function onMouseDown(e){
 
             if (!e) e = window.event;
+            console.log( mouse )
             mouseDown = true;
+            if( mouse.x == -1 ){
+                if( 'ontouchstart' in window )
+                {
+                    getTouchPosition(e);
+                }else
+                {
+                    getMousePosition(e);
+                }
+            console.log( "->", mouse )
+            }
             origin.x = mouse.x;
             origin.y = mouse.y;
             e.preventDefault();
