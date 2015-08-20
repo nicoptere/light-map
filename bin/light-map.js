@@ -302,8 +302,8 @@ function isUndefined(arg) {
 }
 
 },{}],2:[function(require,module,exports){
-var mercator = require( './mercator' );
-var mapUtils = require( './mapUtils' );
+var Mercator = require( './Mercator' );
+var utils = require( './MapUtils' );
 var Rect = require( './Rect' );
 var Tile = require( './Tile' );
 var events = require('events');
@@ -312,13 +312,15 @@ module.exports = function(){
 
     function Map( provider, domains, width, height, minZoom, maxZoom ){
 
-        this.mercator = mercator;
+        this.utils = utils;
 
-        this.provider = provider || "http://{s}.tile.openstreetmap.org/{x}/{y}/{z}.png";
-        this.domains = domains || ["a","b", "c"];
+        //sets the scale of the map, handles retina display
+        this.mercator = new Mercator( 256 );
 
-        this._width = width || mercator.tileSize;
-        this._height = height || mercator.tileSize;
+        //events
+        this.eventEmitter  = new events.EventEmitter();
+
+        //zoom bounds
         this._minZoom = Math.max( 0, minZoom );
         this._maxZoom = Math.max( 1, maxZoom );
 
@@ -334,71 +336,106 @@ module.exports = function(){
         this.keys = [];
         this.loadedTiles = [];
 
-        //viewRect
-        this.viewRect = new Rect( 0,0,this.width,this.height );
-
         //create domElement if running in DOM
         this.isNode = ( typeof window === 'undefined' );
         if( !this.isNode ){
 
             this.canvas = document.createElement("canvas");
-            this.canvas.width  = this.viewRect.w;
-            this.canvas.height = this.viewRect.h;
             this.ctx = this.canvas.getContext("2d");
+
+            // disable smoothing of retina scaled images (i.e. use a neirest-neighbour filter)
+            //this.ctx.imageSmoothingEnabled      = !this.retina;
+            //this.ctx.mozImageSmoothingEnabled   = !this.retina;
+            //this.ctx.msImageSmoothingEnabled    = !this.retina;
         }
 
-        //events
-        this.eventEmitter  = new events.EventEmitter();
+        //viewRect
+        this.setSize( width, height );
+
+
+        //providers
+        this.setProvider( provider, domains, 256 * window.devicePixelRatio )
 
     }
 
     //getters / setters
     Map.prototype = {
 
-        get width(){return this._width; }, set width( value ){this._width = value; this.setViewRect(0,0,this.width, this.height ); },
-        get height(){return this._height; }, set height( value ){this._height = value; this.setViewRect(0,0,this.width, this.height ); },
+        get width(){return this._width; }, set width( value ){this._width = value; this.setSize(this.width, this.height ); },
+        get height(){return this._height; }, set height( value ){this._height = value; this.setSize(this.width, this.height ); },
         get minZoom(){return this._minZoom; }, set minZoom( value ){this._minZoom = value; },
         get maxZoom(){return this._maxZoom; }, set maxZoom( value ){this._maxZoom = value; }
 
     };
-
     /**
-     * sets the view rect
-     * @param x
-     * @param y
+     * changes the Tile provider
+     * @param provider url
+     * @param domains sub domains
+     * @param tileSize
+     */
+    function setProvider(  provider, domains, tileSize )
+    {
+        if( this.provider == provider )return;
+
+        this.dispose();
+
+        this.provider = provider || "http://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png";
+        this.domains = domains || ["a","b","c"];
+        this.scale = tileSize / 256;
+
+        this.mercator = new Mercator( 256 * this.scale );
+
+        this.setSize( this._width, this._height );
+
+        //this.setView();
+
+    }
+    /**
+     * sets the view rect size
      * @param w
      * @param h
+     * @param apply boolean to apply the transform only
      */
-    function setViewRect( x,y,w,h )
+    function setSize( w,h )
     {
-        this.viewRect = new Rect( x,y,w,h );
-        this._width = w;
-        this._height = h;
+        this._width = w || 256;
+        this._height = h || 256;
+
+        this.viewRect = new Rect( 0,0,this._width,this._height );
+
         if( this.canvas != null ){
 
-            this.canvas.width  = this.viewRect.w;
-            this.canvas.height = this.viewRect.h;
+            // set the scaled resolution
+            this.canvas.width  = this.viewRect.w * this.scale;
+            this.canvas.height = this.viewRect.h * this.scale;
+
+            // and the actual size
+            this.canvas.style.width  = ( this.viewRect.w ) + 'px';
+            this.canvas.style.height = ( this.viewRect.h ) + 'px';
         }
-        this.setView(this.latitude, this.longitude, this.zoom );
+        
     }
 
     function renderTiles()
     {
         if( this.isNode )return;
 
-        this.ctx.clearRect( 0, 0, this.viewRect.w, this.viewRect.h );
+        this.ctx.clearRect( 0, 0, this.canvas.width, this.canvas.height );
 
         var c = this.getViewRectCenterPixels();
         var ctx = this.ctx;
         var zoom = this.zoom;
         var viewRect = this.viewRect;
+        var scale = this.scale;
         this.loadedTiles.forEach(function(tile)
         {
             if( tile.zoom == zoom )
             {
-                var px = viewRect.x  +  viewRect.w / 2 + ( tile.px - c[ 0 ] );
-                var py = viewRect.y  +  viewRect.h / 2 + ( tile.py - c[ 1 ] );
+                var px = viewRect.w / 2 * scale + ( tile.px - c[ 0 ] );
+                var py = viewRect.h / 2 * scale + ( tile.py - c[ 1 ] );
+
                 ctx.drawImage( tile.img, Math.round( px ), Math.round( py ) );
+
             }
         });
 
@@ -410,38 +447,29 @@ module.exports = function(){
      * returns an array of the latitude/longitude in degrees
      * @returns {*[]}
      */
-    function getCenter(){
+    function getLatLng(){
 
         return [ this.latitude, this.longitude ];
     }
 
     /**
-     * returns an object of the latitude/longitude in degrees
-     * @returns {*[]}
-     */
-    function getCenterLatLng(){
-
-        return { lat:this.latitude, lng:this.longitude };
-    }
-
-    /**
      * returns the bounds of the view rect as an array of the latitude/longitude in degrees
-     * @returns {*[top left lat, top left lon, bottom right lat, bottom right lon]}
+     * @returns [ top left lat, top left lon, bottom right lat, bottom right lon]
      */
     function viewRectToLatLng( lat, lng, zoom ){
 
-        var c = mercator.latLngToPixels( -lat, lng, zoom  );
-        var w = this.viewRect.w;
-        var h = this.viewRect.h;
-        var tl = mercator.pixelsToLatLng( c[ 0 ] - w / 2, c[ 1 ] - h / 2, zoom );
-        var br = mercator.pixelsToLatLng( c[ 0 ] + w / 2, c[ 1 ] + h / 2, zoom );
+        var c = this.mercator.latLngToPixels( -lat, lng, zoom  );
+        var w = this.viewRect.w * this.scale;
+        var h = this.viewRect.h * this.scale;
+        var tl = this.mercator.pixelsToLatLng( c[ 0 ] - w / 2  * this.scale, c[ 1 ] - h / 2 * this.scale, zoom );
+        var br = this.mercator.pixelsToLatLng( c[ 0 ] + w / 2  * this.scale, c[ 1 ] + h / 2 * this.scale, zoom );
         return [ -tl[ 0 ], tl[ 1 ], -br[ 0 ], br[ 1 ] ];
 
     }
 
     /**
      * returns the bounds of the view rect as an object of the latitude/longitude in degrees
-     * @returns {*[left lon, top lat, right lon, bottom lat]}
+     * @returns {left lon, top lat, right lon, bottom lat}
      */
     function getViewPortBounds()
     {
@@ -457,12 +485,22 @@ module.exports = function(){
 
     /**
      * returns the bounds of the view rect as rectangle (Rect object) of pixels in absolute coordinates
-     * @returns {*[absolute x, absolute y, width, height ]}
+     * @returns new Rect( absolute x, absolute y, width, height )
      */
-    function viewRectToPixels( lat, lng, zoom ){
+        //function viewRectToPixels( lat, lng, zoom ){
+        //
+        //    var c = this.mercator.latLngToPixels( -lat, lng, zoom  );
+        //    return new Rect( c[ 0 ]-this.viewRect.w/2, c[ 1 ]-this.viewRect.h/2, this.viewRect.w, this.viewRect.h );
+        //}
 
-        var c = mercator.latLngToPixels( -lat, lng, zoom  );
-        return new Rect( c[ 0 ], c[ 1 ], this.viewRect.w, this.viewRect.h );
+    /**
+     * returns the bounds of the view rect as rectangle (Rect object) of pixels in absolute coordinates
+     * @returns new Rect( absolute x, absolute y, width, height )
+     */
+    function canvasPixelToLatLng( px, py, zoom ){
+
+        var c = this.mercator.latLngToPixels( -ma, lng, zoom || map.zoom );
+        return new Rect( c[ 0 ]-this.viewRect.w/2, c[ 1 ]-this.viewRect.h/2, this.viewRect.w, this.viewRect.h );
     }
 
     /**
@@ -471,8 +509,8 @@ module.exports = function(){
      */
     function getViewRectCenter()
     {
-        var bounds = viewRectToLatLng( this.latitude, this.longitude, this.zoom, this.viewRect);
-        return [ mapUtils.map(.5,0,1, -bounds[0], -bounds[2] ), mapUtils.map(.5,0,1, bounds[1], bounds[3] )];
+        var bounds = this.viewRectToLatLng( this.latitude, this.longitude, this.zoom, this.viewRect);
+        return [ utils.map(.5,0,1, -bounds[0], -bounds[2] ), utils.map(.5,0,1, bounds[1], bounds[3] )];
     }
 
     /**
@@ -481,54 +519,7 @@ module.exports = function(){
      */
     function getViewRectCenterPixels()
     {
-        return mercator.latLngToPixels( -this.latitude, this.longitude, this.zoom );
-    }
-
-    /**
-     * returns the absolute x/y coordinates of the viewrect top left corner in pixels
-     * @returns {*[]}
-     */
-    function getViewRctTopLeft()
-    {
-        var c = mercator.latLngToPixels( -this.latitude, this.longitude, this.zoom  );
-        var w = this.viewRect.w;
-        var h = this.viewRect.h;
-        return mercator.pixelsToLatLng( c[ 0 ] - w / 2, c[ 1 ] - h / 2, this.zoom );
-    }
-
-    /**
-     * retrieves a tile by its quadkey
-     * @param key
-     * @returns {*}
-     */
-    function getTileByKey( key )
-    {
-        for( var k = 0; k < this.tiles.length; k++ )
-        {
-            if( this.tiles[ k ].key == key )
-            {
-                return this.tiles[ k ];
-            }
-        }
-        return null;
-    }
-
-    /**
-     * returns the X / Y index of the top left tile in the view rect
-     * @param zoom
-     * @returns {*[]}
-     */
-    function viewRectTilesDelta(zoom)
-    {
-        zoom = zoom || this.zoom;
-        var bounds = this.viewRectToLatLng( this.latitude, this.longitude, zoom, this.viewRect);
-        var tl = mercator.latLonToTile(-bounds[0], bounds[1], zoom);
-        var br = mercator.latLonToTile(-bounds[2], bounds[3], zoom);
-        var u = 0;
-        var v = 0;
-        for (var i = tl[0]; i <= br[0]; i++) u++;
-        for (var j = tl[1]; j <= br[1]; j++) v++;
-        return [ bounds[0], bounds[1], u, v ];
+        return this.mercator.latLngToPixels( -this.latitude, this.longitude, this.zoom );
     }
 
     /**
@@ -540,8 +531,8 @@ module.exports = function(){
     {
         zoom = zoom || this.zoom;
         var bounds = viewRectToLatLng( this.latitude, this.longitude, zoom, this.viewRect);
-        var tl = mercator.latLonToTile(-bounds[0], bounds[1], zoom);
-        var br = mercator.latLonToTile(-bounds[2], bounds[3], zoom);
+        var tl = this.mercator.latLonToTile(-bounds[0], bounds[1], zoom);
+        var br = this.mercator.latLonToTile(-bounds[2], bounds[3], zoom);
         var u = 0;
         var v = 0;
         var tiles = [];
@@ -550,7 +541,7 @@ module.exports = function(){
             v = 0;
             for (var j = tl[1]; j <= br[1]; j++)
             {
-                var key = mercator.tileXYToQuadKey(i, j, zoom);
+                var key = this.mercator.tileXYToQuadKey(i, j, zoom);
                 var exists = false;
                 for (var k = 0; k < this.loadedTiles.length; k++){
 
@@ -576,10 +567,6 @@ module.exports = function(){
                             break;
                         }
                     }
-                    //if (exists == false) {
-                    //    tiles.push(new Tile(this, key));
-                    //    this.keys.push(key);
-                    //}
                 }
                 v++;
             }
@@ -600,20 +587,22 @@ module.exports = function(){
     {
 
         var bounds = this.viewRectToLatLng( lat, lng, zoom, viewRect );
-        var tl = mercator.latLonToTile( -bounds[0], bounds[1], zoom );
-        var br = mercator.latLonToTile( -bounds[2], bounds[3], zoom );
+        var tl = this.mercator.latLonToTile( -bounds[0], bounds[1], zoom );
+        var br = this.mercator.latLonToTile( -bounds[2], bounds[3], zoom );
 
         var tiles = [];
         for( var i = tl[ 0 ]; i <= br[ 0 ]; i++ )
         {
             for( var j = tl[ 1 ]; j <= br[ 1 ]; j++ )
             {
-                var key = mercator.tileXYToQuadKey( i, j, zoom );
+                var key = this.mercator.tileXYToQuadKey( i, j, zoom );
 
                 //check if the tile was already loaded/being loaded
                 if( this.keys.indexOf( key ) == -1 )
                 {
                     var tile =  new Tile( this, key );
+
+                    console.log( "new Tile", tile.key, tile.zoom );
                     tiles.push( tile );
                     this.keys.push( key );
                 }
@@ -693,25 +682,7 @@ module.exports = function(){
      */
     function latLngToPixels( lat, lng, zoom )
     {
-        return mercator.latLngToPixels( -lat, lng, zoom || this.zoom );
-    }
-
-    /**
-     * evaluates the "altitude" at which a camera should be from the ground (in meters)
-     * more context : http://gis.stackexchange.com/questions/12991/how-to-calculate-distance-to-ground-of-all-18-osm-zoom-levels/142555#142555
-     * @param latitude
-     * @param zoom
-     * @param multiplier
-     * @returns {*}
-     */
-    function altitude( latitude, zoom, multiplier )
-    {
-        latitude    = latitude || this.latitude;
-        zoom        = zoom || this.zoom;
-        multiplier  = ( mercator.tileSize / 256 );
-
-        var C = Math.PI * 2 * mercator.earthRadius;
-        return mercator.earthRadius + ( C * Math.cos( latitude * RAD ) / Math.pow( 2, zoom ) * multiplier );
+        return this.mercator.latLngToPixels( -lat, lng, zoom || this.zoom );
     }
 
     /**
@@ -722,13 +693,16 @@ module.exports = function(){
     function resolution( zoom )
     {
         zoom        = zoom || this.zoom;
-        return mercator.resolution( zoom );
+        return this.mercator.resolution( zoom );
     }
 
+    /**
+     * destroys all the tiles
+     */
     function dispose()
     {
-        var scoep = this;
-        this.tiles.forEach( function(tile){ tile.eventEmitter.removeListener( Tile.ON_TILE_LOADED, scope.appendTile ); tile.dispose(); });
+        var scope = this;
+        this.tiles.forEach( function(tile){ tile.eventEmitter.removeListener( Tile.ON_TILE_LOADED, scope.appendTile ); tile.valid = false; tile.dispose(); });
         this.loadedTiles.forEach( function(tile){ tile.dispose(); });
 
         this.tiles = [];
@@ -746,25 +720,19 @@ module.exports = function(){
     var _p = Map.prototype;
     _p.constructor = Map;
 
-    _p.setViewRect             = setViewRect;
+    _p.setProvider             = setProvider;
+    _p.setSize                 = setSize;
     _p.renderTiles             = renderTiles;
     _p.latLngToPixels          = latLngToPixels;
-    _p.getCenter               = getCenter;
-    _p.getCenterLatLng         = getCenterLatLng;
     _p.viewRectToLatLng        = viewRectToLatLng;
     _p.getViewPortBounds       = getViewPortBounds;
-    _p.viewRectToPixels        = viewRectToPixels;
     _p.getViewRectCenter       = getViewRectCenter;
     _p.getViewRectCenterPixels = getViewRectCenterPixels;
-    _p.getViewRctTopLeft       = getViewRctTopLeft;
     _p.setView                 = setView;
-    _p.getTileByKey            = getTileByKey;
-    _p.viewRectTilesDelta      = viewRectTilesDelta;
     _p.viewRectTiles           = viewRectTiles;
     _p.getVisibleTiles         = getVisibleTiles;
     _p.load                    = load;
     _p.appendTile              = appendTile;
-    _p.altitude                = altitude;
     _p.resolution              = resolution;
     _p.dispose                 = dispose;
 
@@ -773,7 +741,59 @@ module.exports = function(){
 }();
 
 
-},{"./Rect":4,"./Tile":5,"./mapUtils":6,"./mercator":7,"events":1}],3:[function(require,module,exports){
+},{"./MapUtils":3,"./Mercator":4,"./Rect":5,"./Tile":6,"events":1}],3:[function(require,module,exports){
+
+module.exports.MapUtils = function( exports )
+{
+    var RAD = Math.PI / 180;
+
+    function isPowerOfTwo( value ){
+
+        return ( (value & -value) == value );
+    }
+
+    function powerTwo(val){
+
+        if( isPowerOfTwo( val ) )return val
+        var b = 1;
+        while ( b < ~~( val ) )b = b << 1;
+        return b;
+    }
+
+    //http://www.movable-type.co.uk/scripts/latlong.html
+    function latLngDistance(lat1, lng1, lat2, lng2)
+    {
+        var R = EARTH_RADIUS; // km
+        var p1 = lat1 * RAD;
+        var p2 = lat2 * RAD;
+        var tp = (lat2-lat1) * RAD;
+        var td = (lng2-lng1) * RAD;
+
+        var a = Math.sin(tp/2) * Math.sin(tp/2) +
+                Math.cos(p1) * Math.cos(p2) *
+                Math.sin(td/2) * Math.sin(td/2);
+        var c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+        return R * c;
+    }
+    function lerp ( t, a, b ){ return a + t * ( b - a ); }
+    function norm( t, a, b ){return ( t - a ) / ( b - a );}
+    function map( t, a0, b0, a1, b1 ){ return lerp( norm( t, a0, b0 ), a1, b1 );}
+
+    // methods
+
+    exports.lerp = lerp;
+    exports.norm = norm;
+    exports.map = map;
+
+    exports.isPowerOfTwo = isPowerOfTwo;
+    exports.powerTwo = powerTwo;
+    exports.latLngDistance = latLngDistance;
+
+    return exports;
+
+}( module.exports );
+
+},{}],4:[function(require,module,exports){
 /*
 
 //from http://www.maptiler.org/google-maps-coordinates-tile-bounds-projection/
@@ -843,38 +863,25 @@ module.exports = function(){
 
 */
 
-module.exports = function( exports )
-{
+module.exports = function() {
 
-    //defaults
-    var tileSize = 256;
-    var earthRadius = 6378137;
-    var initialResolution = 2 * Math.PI * earthRadius / tileSize;
-    var originShift = 2 * Math.PI * earthRadius / 2.0;
+    function Mercator( tile_size, earth_radius )
+    {
+        this.init(tile_size, earth_radius);
+    }
 
-    //public vars
-    exports.tileSize = tileSize;
-    exports.earthRadius = earthRadius;
-    exports.initialResolution = initialResolution;
-    exports.originShift = originShift;
-
-    function init( tile_size, earth_radius )
+    function init(tile_size, earth_radius)
     {
         //Initialize the TMS Global Mercator pyramid
-        tileSize = tile_size || 256;
+        this.tileSize = tile_size || 256;
 
-        earthRadius = earth_radius  || 6378137;
+        this.earthRadius = earth_radius  || 6378137;
 
         // 156543.03392804062 for tileSize 256 pixels
-        initialResolution = 2 * Math.PI * earthRadius / tileSize;
+        this.initialResolution = 2 * Math.PI * this.earthRadius / this.tileSize;
 
         // 20037508.342789244
-        originShift = 2 * Math.PI * earthRadius / 2.0;
-
-        exports.tileSize = tileSize;
-        exports.earthRadius = earthRadius;
-        exports.initialResolution = initialResolution;
-        exports.originShift = originShift;
+        this.originShift = 2 * Math.PI * this.earthRadius / 2.0;
 
     }
 
@@ -882,17 +889,17 @@ module.exports = function( exports )
     //converts given lat/lon in WGS84 Datum to XY in Spherical Mercator EPSG:900913
     function latLonToMeters( lat, lon )
     {
-        var mx = lon * originShift / 180.0;
+        var mx = lon * this.originShift / 180.0;
         var my = Math.log( Math.tan((90 + lat ) * Math.PI / 360.0)) / (Math.PI / 180.0);
-        my = my * originShift / 180.0;
+        my = my * this.originShift / 180.0;
         return [mx, my];
     }
 
     //converts XY point from Spherical Mercator EPSG:900913 to lat/lon in WGS84 Datum
     function metersToLatLon( mx, my )
     {
-        var lon = (mx / originShift) * 180.0;
-        var lat = (my / originShift) * 180.0;
+        var lon = (mx / this.originShift) * 180.0;
+        var lat = (my / this.originShift) * 180.0;
         lat = 180 / Math.PI * ( 2 * Math.atan( Math.exp(lat * Math.PI / 180.0 ) ) - Math.PI / 2.0);
         return [lat, lon];
     }
@@ -900,107 +907,80 @@ module.exports = function( exports )
     //converts pixel coordinates in given zoom level of pyramid to EPSG:900913
     function pixelsToMeters( px, py, zoom )
     {
-        var res = resolution(zoom);
-        var mx = px * res - originShift;
-        var my = py * res - originShift;
+        var res = this.resolution(zoom);
+        var mx = px * res - this.originShift;
+        var my = py * res - this.originShift;
         return [mx, my];
     }
 
     //converts EPSG:900913 to pyramid pixel coordinates in given zoom level
     function metersToPixels( mx, my, zoom )
     {
-        var res = resolution( zoom );
-        var px = (mx + originShift) / res;
-        var py = (my + originShift) / res;
+        var res = this.resolution( zoom );
+        var px = (mx + this.originShift) / res;
+        var py = (my + this.originShift) / res;
         return [px, py];
     }
 
     //returns tile for given mercator coordinates
     function metersToTile( mx, my, zoom )
     {
-        var pxy = metersToPixels(mx, my, zoom);
-        return pixelsToTile(pxy[0], pxy[1]);
+        var pxy = this.metersToPixels(mx, my, zoom);
+        return this.pixelsToTile(pxy[0], pxy[1]);
     }
 
     //returns a tile covering region in given pixel coordinates
     function pixelsToTile( px, py)
     {
-        var tx = parseInt( Math.ceil( px / parseFloat( tileSize ) ) - 1);
-        var ty = parseInt( Math.ceil( py / parseFloat( tileSize ) ) - 1);
+        var tx = parseInt( Math.ceil( px / parseFloat( this.tileSize ) ) - 1);
+        var ty = parseInt( Math.ceil( py / parseFloat( this.tileSize ) ) - 1);
         return [tx, ty];
     }
 
     //returns a tile covering region the given lat lng coordinates
     function latLonToTile( lat, lng, zoom )
     {
-        var px = latLngToPixels( lat, lng, zoom );
-        return pixelsToTile( px[ 0 ], px[ 1 ] );
+        var px = this.latLngToPixels( lat, lng, zoom );
+        return this.pixelsToTile( px[ 0 ], px[ 1 ] );
     }
 
     //Move the origin of pixel coordinates to top-left corner
     function pixelsToRaster( px, py, zoom )
     {
-        var mapSize = tileSize << zoom;
+        var mapSize = this.tileSize << zoom;
         return [px, mapSize - py];
     }
 
     //returns bounds of the given tile in EPSG:900913 coordinates
     function tileMetersBounds( tx, ty, zoom )
     {
-        var min = pixelsToMeters(tx * tileSize, ty * tileSize, zoom);
-        var max = pixelsToMeters((tx + 1) * tileSize, (ty + 1) * tileSize, zoom);
+        var min = this.pixelsToMeters(tx * this.tileSize, ty * this.tileSize, zoom);
+        var max = this.pixelsToMeters((tx + 1) * this.tileSize, (ty + 1) * this.tileSize, zoom);
         return [ min[0], min[1], max[0], max[1] ];
     }
 
     //returns bounds of the given tile in pixels
     function tilePixelsBounds( tx, ty, zoom )
     {
-        var bounds = tileMetersBounds( tx, ty, zoom );
-        var min = metersToPixels(bounds[0], bounds[1], zoom );
-        var max = metersToPixels(bounds[2], bounds[3], zoom );
+        var bounds = this.tileMetersBounds( tx, ty, zoom );
+        var min = this.metersToPixels(bounds[0], bounds[1], zoom );
+        var max = this.metersToPixels(bounds[2], bounds[3], zoom );
         return [ min[0], min[1], max[0], max[1] ];
     }
 
     //returns bounds of the given tile in latutude/longitude using WGS84 datum
     function tileLatLngBounds( tx, ty, zoom )
     {
-        var bounds = tileMetersBounds( tx, ty, zoom );
-        var min = metersToLatLon(bounds[0], bounds[1]);
-        var max = metersToLatLon(bounds[2], bounds[3]);
+        var bounds = this.tileMetersBounds( tx, ty, zoom );
+        var min = this.metersToLatLon(bounds[0], bounds[1]);
+        var max = this.metersToLatLon(bounds[2], bounds[3]);
         return [ min[0], min[1], max[0], max[1] ];
     }
 
     //resolution (meters/pixel) for given zoom level (measured at Equator)
     function resolution( zoom )
     {
-        return initialResolution / Math.pow( 2, zoom );
-    }
-
-    /**
-     * gives the camera's 'altitude' from the center of the earth at a given latitude
-     * @param latitude
-     * @param zoomlevel
-     * @returns {*}
-     */
-    function altitude( latitude, zoomlevel )
-    {
-        /*
-         The distance represented by one pixel (S) is given by
-
-         S = C * cos( y )/ 2 ^ zoomlevel
-
-         where
-         latitude: is the latitude of where you're interested in the scale.
-         zoomlevel: is the zoom level ( typically a value between 0 & 21 )
-
-         and
-
-         C is the (equatorial) circumference of the Earth
-         earthRadius = 6378137 ( earth radius in meters )
-         //*/
-        var C = Math.PI * 2 * earthRadius;
-        return earthRadius + ( C * Math.cos( latitude ) / Math.pow( 2, zoomlevel ) * ( exports.tileSize / 256 ) );
-
+        return this.initialResolution / Math.pow( 2, zoom );
     }
 
     /**
@@ -1012,7 +992,7 @@ module.exports = function( exports )
     function zoomForPixelSize( pixelSize )
     {
         var i = 30;
-        while( pixelSize > resolution(i) )
+        while( pixelSize > this.resolution(i) )
         {
             i--;
             if( i <= 0 )return 0;
@@ -1023,22 +1003,22 @@ module.exports = function( exports )
     //returns the lat lng of a pixel X/Y coordinates at given zoom level
     function pixelsToLatLng( px, py, zoom )
     {
-        var meters = pixelsToMeters( px, py, zoom );
-        return metersToLatLon( meters[ 0 ], meters[ 1 ] );
+        var meters = this.pixelsToMeters( px, py, zoom );
+        return this.metersToLatLon( meters[ 0 ], meters[ 1 ] );
     }
 
     //returns the pixel X/Y coordinates at given zoom level from a given lat lng
     function latLngToPixels( lat, lng, zoom )
     {
-        var meters = latLonToMeters( lat, lng, zoom );
-        return metersToPixels( meters[ 0 ], meters[ 1 ], zoom );
+        var meters = this.latLonToMeters( lat, lng, zoom );
+        return this.metersToPixels( meters[ 0 ], meters[ 1 ], zoom );
     }
 
     //retrieves a given tile from a given lat lng
     function latLngToTile( lat, lng, zoom )
     {
-        var meters = latLonToMeters( lat, lng );
-        return metersToTile( meters[ 0 ], meters[ 1 ], zoom );
+        var meters = this.latLonToMeters( lat, lng );
+        return this.metersToTile( meters[ 0 ], meters[ 1 ], zoom );
     }
 
     //encodes the tlie X / Y coordinates & zoom level into a quadkey
@@ -1102,29 +1082,34 @@ module.exports = function( exports )
 
     // public methods
 
-    exports.init = init;
-    exports.latLonToMeters = latLonToMeters;
-    exports.metersToLatLon = metersToLatLon;
-    exports.pixelsToMeters = pixelsToMeters;
-    exports.metersToPixels = metersToPixels;
-    exports.metersToTile = metersToTile;
-    exports.pixelsToTile = pixelsToTile;
-    exports.latLonToTile = latLonToTile;
-    exports.pixelsToRaster = pixelsToRaster;
-    exports.tileMetersBounds = tileMetersBounds;
-    exports.tilePixelsBounds = tilePixelsBounds;
-    exports.tileLatLngBounds = tileLatLngBounds;
-    exports.resolution = resolution;
-    exports.zoomForPixelSize = zoomForPixelSize;
-    exports.pixelsToLatLng = pixelsToLatLng;
-    exports.latLngToPixels = latLngToPixels;
-    exports.latLngToTile = latLngToTile;
-    exports.tileXYToQuadKey = tileXYToQuadKey;
-    exports.quadKeyToTileXY = quadKeyToTileXY;
-    return exports;
+    var _p = Mercator.prototype;
+    _p.constructor = Mercator;
 
-}( {} );
-},{}],4:[function(require,module,exports){
+    _p.init = init;
+    _p.latLonToMeters = latLonToMeters;
+    _p.metersToLatLon = metersToLatLon;
+    _p.pixelsToMeters = pixelsToMeters;
+    _p.metersToPixels = metersToPixels;
+    _p.metersToTile = metersToTile;
+    _p.pixelsToTile = pixelsToTile;
+    _p.latLonToTile = latLonToTile;
+    _p.pixelsToRaster = pixelsToRaster;
+    _p.tileMetersBounds = tileMetersBounds;
+    _p.tilePixelsBounds = tilePixelsBounds;
+    _p.tileLatLngBounds = tileLatLngBounds;
+    _p.resolution = resolution;
+    _p.zoomForPixelSize = zoomForPixelSize;
+    _p.pixelsToLatLng = pixelsToLatLng;
+    _p.latLngToPixels = latLngToPixels;
+    _p.latLngToTile = latLngToTile;
+    _p.tileXYToQuadKey = tileXYToQuadKey;
+    _p.quadKeyToTileXY = quadKeyToTileXY;
+
+    return Mercator;
+
+
+}();
+},{}],5:[function(require,module,exports){
 
 module.exports = function()
 {
@@ -1198,10 +1183,10 @@ module.exports = function()
     return Rect;
 
 }();
-},{}],5:[function(require,module,exports){
+},{}],6:[function(require,module,exports){
 /*
 * Tile object, holds reference to:
-    *
+*
 *      tile top left lat/lon
 *      tile id
 *      tile X/Y
@@ -1210,10 +1195,11 @@ module.exports = function()
 *
 * + some helper methods ( contains, isContained, intersect )
 *
+* @param map the map this tile is bound to
 * @param quadKey optional, can be set with initFromQuadKey()
 * @constructor
 */
-var mercator = require( './Mercator' );
+
 var events = require( 'events' );
 module.exports = function()
 {
@@ -1222,6 +1208,7 @@ module.exports = function()
 
     /**
      * @param map Map instance this tile is associated with
+     * @param map the map this tile is bound to
      * @param quadKey the QuadKey of this Tile
      * @constructor
      */
@@ -1276,20 +1263,20 @@ module.exports = function()
 
     function initFromTileXY(x, y, zoom)
     {
-        var quadKey = mercator.tileXYToQuadKey(x, y, zoom);
+        var quadKey = this.map.mercator.tileXYToQuadKey(x, y, zoom);
         initFromQuadKey(quadKey);
     }
 
     function initFromQuadKey(quadKey)
     {
 
-        var tile = mercator.quadKeyToTileXY(quadKey);
+        var tile = this.map.mercator.quadKeyToTileXY(quadKey);
         if ( tile == undef) {
             this.valid = false;
             return;
         }
 
-        var center = mercator.tileLatLngBounds(this.tx + .5, this.ty + .5, this.zoom);
+        var center = this.map.mercator.tileLatLngBounds(this.tx + .5, this.ty + .5, this.zoom);
         this.lat = -center[0];
         this.lng = center[1];
 
@@ -1300,15 +1287,15 @@ module.exports = function()
         this.ty = tile.ty;
         this.zoom = tile.zoom;
 
-        this.meterBounds = mercator.tileMetersBounds( this.tx, this.ty, this.zoom);
+        this.meterBounds = this.map.mercator.tileMetersBounds( this.tx, this.ty, this.zoom);
         this.mx = this.meterBounds[0];
         this.my = this.meterBounds[1];
 
-        this.pixelBounds = mercator.tilePixelsBounds(this.tx, this.ty, this.zoom);
+        this.pixelBounds = this.map.mercator.tilePixelsBounds(this.tx, this.ty, this.zoom);
         this.px = this.pixelBounds[0];
         this.py = this.pixelBounds[1];
 
-        this.latLngBounds = mercator.tileLatLngBounds(this.tx, this.ty, this.zoom);
+        this.latLngBounds = this.map.mercator.tileLatLngBounds(this.tx, this.ty, this.zoom);
         this.latLngBounds[0] *= -1;
         this.latLngBounds[2] *= -1;
 
@@ -1325,15 +1312,80 @@ module.exports = function()
             return;
         }
 
+        if( !this.valid )
+        {
+            console.log( "invalid tile, not loading");
+            return;
+        }
+
         var scope = this;
+
         this.img.tile = this;
         this.img.crossOrigin = 'anonymous';
         this.img.onload = function (e) {
+
+            if( scope.map == undef )
+            {
+                console.warn( 'loaded Tile has no associated map > ', scope.key, scope.zoom );
+                return;
+            }
+
             scope.loaded = true;
             scope.eventEmitter.emit( Tile.ON_TILE_LOADED, scope );
+
         };
         this.img.setAttribute("key", this.key);
         this.img.src = this.url;
+    }
+
+    /**
+     * rescales the image so that it fits the map's scale
+     * @param img input image
+     * @param tileSize destination tileSize
+     * @param scale scale factor
+     */
+    function rescaleImage( img, tileSize, scale )
+    {
+
+        var canvas = document.createElement( 'canvas' );
+        var w = canvas.width  = img.width ;
+        var h = canvas.height = img.height;
+
+        //collect image data
+        var ctx = canvas.getContext("2d");
+        ctx.drawImage( img, 0,0,w,h );
+        var srcData = ctx.getImageData( 0,0,w,h).data;
+
+        //result
+        var imgOut = ctx.createImageData(tileSize,tileSize);
+        var out = imgOut.data;
+
+        //nearest neighbours upscale
+        for( var i = 0; i < srcData.length; i+=4 )
+        {
+            var x = ( i/4 % w ) * scale;
+            var y = ~~( i/4 / w ) * scale;
+            for( var j = x; j <= x + scale; j++ )
+            {
+                if( x >= tileSize )continue;
+                for( var k = y; k <= y + scale; k++ ) {
+
+                    var id = ( ~~( j ) + ~~( k ) * tileSize ) * 4;
+                    out[id]     = srcData[i  ];
+                    out[id + 1] = srcData[i+1];
+                    out[id + 2] = srcData[i+2];
+                    out[id + 3] = srcData[i+3];
+                }
+            }
+        }
+        canvas.width  = canvas.height = tileSize;
+        imgOut.data = out;
+        ctx.putImageData(imgOut,0,0);
+
+        //replace img with canvas
+        delete this.img;
+        this.img = canvas;
+
     }
 
     function getMapUrl(x, y, zl)
@@ -1399,6 +1451,7 @@ module.exports = function()
     _p.initFromTileXY = initFromTileXY;
     _p.initFromQuadKey = initFromQuadKey;
     _p.load = load;
+    _p.rescaleImage = rescaleImage;
     _p.getMapUrl = getMapUrl;
     _p.containsLatLng = containsLatLng;
     _p.isContained = isContained;
@@ -1411,59 +1464,5 @@ module.exports = function()
 
 }();
 
-},{"./Mercator":3,"events":1}],6:[function(require,module,exports){
-
-module.exports.MapUtils = function( exports )
-{
-    var RAD = Math.PI / 180;
-
-    function isPowerOfTwo( value ){
-
-        return ( (value & -value) == value );
-    }
-
-    function powerTwo(val){
-
-        if( isPowerOfTwo( val ) )return val
-        var b = 1;
-        while ( b < ~~( val ) )b = b << 1;
-        return b;
-    }
-
-    //http://www.movable-type.co.uk/scripts/latlong.html
-    function latLngDistance(lat1, lng1, lat2, lng2)
-    {
-        var R = EARTH_RADIUS; // km
-        var p1 = lat1 * RAD;
-        var p2 = lat2 * RAD;
-        var tp = (lat2-lat1) * RAD;
-        var td = (lng2-lng1) * RAD;
-
-        var a = Math.sin(tp/2) * Math.sin(tp/2) +
-                Math.cos(p1) * Math.cos(p2) *
-                Math.sin(td/2) * Math.sin(td/2);
-        var c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-        return R * c;
-    }
-    function lerp ( t, a, b ){ return a + t * ( b - a ); }
-    function norm( t, a, b ){return ( t - a ) / ( b - a );}
-    function map( t, a0, b0, a1, b1 ){ return lerp( norm( t, a0, b0 ), a1, b1 );}
-
-    // methods
-
-    exports.lerp = lerp;
-    exports.norm = norm;
-    exports.map = map;
-
-    exports.isPowerOfTwo = isPowerOfTwo;
-    exports.powerTwo = powerTwo;
-    exports.latLngDistance = latLngDistance;
-
-    return exports;
-
-}( module.exports );
-
-},{}],7:[function(require,module,exports){
-arguments[4][3][0].apply(exports,arguments)
-},{"dup":3}]},{},[2])(2)
+},{"events":1}]},{},[2])(2)
 });

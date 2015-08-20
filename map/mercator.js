@@ -67,38 +67,25 @@
 
 */
 
-module.exports = function( exports )
-{
+module.exports = function() {
 
-    //defaults
-    var tileSize = 256;
-    var earthRadius = 6378137;
-    var initialResolution = 2 * Math.PI * earthRadius / tileSize;
-    var originShift = 2 * Math.PI * earthRadius / 2.0;
+    function Mercator( tile_size, earth_radius )
+    {
+        this.init(tile_size, earth_radius);
+    }
 
-    //public vars
-    exports.tileSize = tileSize;
-    exports.earthRadius = earthRadius;
-    exports.initialResolution = initialResolution;
-    exports.originShift = originShift;
-
-    function init( tile_size, earth_radius )
+    function init(tile_size, earth_radius)
     {
         //Initialize the TMS Global Mercator pyramid
-        tileSize = tile_size || 256;
+        this.tileSize = tile_size || 256;
 
-        earthRadius = earth_radius  || 6378137;
+        this.earthRadius = earth_radius  || 6378137;
 
         // 156543.03392804062 for tileSize 256 pixels
-        initialResolution = 2 * Math.PI * earthRadius / tileSize;
+        this.initialResolution = 2 * Math.PI * this.earthRadius / this.tileSize;
 
         // 20037508.342789244
-        originShift = 2 * Math.PI * earthRadius / 2.0;
-
-        exports.tileSize = tileSize;
-        exports.earthRadius = earthRadius;
-        exports.initialResolution = initialResolution;
-        exports.originShift = originShift;
+        this.originShift = 2 * Math.PI * this.earthRadius / 2.0;
 
     }
 
@@ -106,17 +93,17 @@ module.exports = function( exports )
     //converts given lat/lon in WGS84 Datum to XY in Spherical Mercator EPSG:900913
     function latLonToMeters( lat, lon )
     {
-        var mx = lon * originShift / 180.0;
+        var mx = lon * this.originShift / 180.0;
         var my = Math.log( Math.tan((90 + lat ) * Math.PI / 360.0)) / (Math.PI / 180.0);
-        my = my * originShift / 180.0;
+        my = my * this.originShift / 180.0;
         return [mx, my];
     }
 
     //converts XY point from Spherical Mercator EPSG:900913 to lat/lon in WGS84 Datum
     function metersToLatLon( mx, my )
     {
-        var lon = (mx / originShift) * 180.0;
-        var lat = (my / originShift) * 180.0;
+        var lon = (mx / this.originShift) * 180.0;
+        var lat = (my / this.originShift) * 180.0;
         lat = 180 / Math.PI * ( 2 * Math.atan( Math.exp(lat * Math.PI / 180.0 ) ) - Math.PI / 2.0);
         return [lat, lon];
     }
@@ -124,107 +111,80 @@ module.exports = function( exports )
     //converts pixel coordinates in given zoom level of pyramid to EPSG:900913
     function pixelsToMeters( px, py, zoom )
     {
-        var res = resolution(zoom);
-        var mx = px * res - originShift;
-        var my = py * res - originShift;
+        var res = this.resolution(zoom);
+        var mx = px * res - this.originShift;
+        var my = py * res - this.originShift;
         return [mx, my];
     }
 
     //converts EPSG:900913 to pyramid pixel coordinates in given zoom level
     function metersToPixels( mx, my, zoom )
     {
-        var res = resolution( zoom );
-        var px = (mx + originShift) / res;
-        var py = (my + originShift) / res;
+        var res = this.resolution( zoom );
+        var px = (mx + this.originShift) / res;
+        var py = (my + this.originShift) / res;
         return [px, py];
     }
 
     //returns tile for given mercator coordinates
     function metersToTile( mx, my, zoom )
     {
-        var pxy = metersToPixels(mx, my, zoom);
-        return pixelsToTile(pxy[0], pxy[1]);
+        var pxy = this.metersToPixels(mx, my, zoom);
+        return this.pixelsToTile(pxy[0], pxy[1]);
     }
 
     //returns a tile covering region in given pixel coordinates
     function pixelsToTile( px, py)
     {
-        var tx = parseInt( Math.ceil( px / parseFloat( tileSize ) ) - 1);
-        var ty = parseInt( Math.ceil( py / parseFloat( tileSize ) ) - 1);
+        var tx = parseInt( Math.ceil( px / parseFloat( this.tileSize ) ) - 1);
+        var ty = parseInt( Math.ceil( py / parseFloat( this.tileSize ) ) - 1);
         return [tx, ty];
     }
 
     //returns a tile covering region the given lat lng coordinates
     function latLonToTile( lat, lng, zoom )
     {
-        var px = latLngToPixels( lat, lng, zoom );
-        return pixelsToTile( px[ 0 ], px[ 1 ] );
+        var px = this.latLngToPixels( lat, lng, zoom );
+        return this.pixelsToTile( px[ 0 ], px[ 1 ] );
     }
 
     //Move the origin of pixel coordinates to top-left corner
     function pixelsToRaster( px, py, zoom )
     {
-        var mapSize = tileSize << zoom;
+        var mapSize = this.tileSize << zoom;
         return [px, mapSize - py];
     }
 
     //returns bounds of the given tile in EPSG:900913 coordinates
     function tileMetersBounds( tx, ty, zoom )
     {
-        var min = pixelsToMeters(tx * tileSize, ty * tileSize, zoom);
-        var max = pixelsToMeters((tx + 1) * tileSize, (ty + 1) * tileSize, zoom);
+        var min = this.pixelsToMeters(tx * this.tileSize, ty * this.tileSize, zoom);
+        var max = this.pixelsToMeters((tx + 1) * this.tileSize, (ty + 1) * this.tileSize, zoom);
         return [ min[0], min[1], max[0], max[1] ];
     }
 
     //returns bounds of the given tile in pixels
     function tilePixelsBounds( tx, ty, zoom )
     {
-        var bounds = tileMetersBounds( tx, ty, zoom );
-        var min = metersToPixels(bounds[0], bounds[1], zoom );
-        var max = metersToPixels(bounds[2], bounds[3], zoom );
+        var bounds = this.tileMetersBounds( tx, ty, zoom );
+        var min = this.metersToPixels(bounds[0], bounds[1], zoom );
+        var max = this.metersToPixels(bounds[2], bounds[3], zoom );
         return [ min[0], min[1], max[0], max[1] ];
     }
 
     //returns bounds of the given tile in latutude/longitude using WGS84 datum
     function tileLatLngBounds( tx, ty, zoom )
     {
-        var bounds = tileMetersBounds( tx, ty, zoom );
-        var min = metersToLatLon(bounds[0], bounds[1]);
-        var max = metersToLatLon(bounds[2], bounds[3]);
+        var bounds = this.tileMetersBounds( tx, ty, zoom );
+        var min = this.metersToLatLon(bounds[0], bounds[1]);
+        var max = this.metersToLatLon(bounds[2], bounds[3]);
         return [ min[0], min[1], max[0], max[1] ];
     }
 
     //resolution (meters/pixel) for given zoom level (measured at Equator)
     function resolution( zoom )
     {
-        return initialResolution / Math.pow( 2, zoom );
-    }
-
-    /**
-     * gives the camera's 'altitude' from the center of the earth at a given latitude
-     * @param latitude
-     * @param zoomlevel
-     * @returns {*}
-     */
-    function altitude( latitude, zoomlevel )
-    {
-        /*
-         The distance represented by one pixel (S) is given by
-
-         S = C * cos( y )/ 2 ^ zoomlevel
-
-         where
-         latitude: is the latitude of where you're interested in the scale.
-         zoomlevel: is the zoom level ( typically a value between 0 & 21 )
-
-         and
-
-         C is the (equatorial) circumference of the Earth
-         earthRadius = 6378137 ( earth radius in meters )
-         //*/
-        var C = Math.PI * 2 * earthRadius;
-        return earthRadius + ( C * Math.cos( latitude ) / Math.pow( 2, zoomlevel ) * ( exports.tileSize / 256 ) );
-
+        return this.initialResolution / Math.pow( 2, zoom );
     }
 
     /**
@@ -236,7 +196,7 @@ module.exports = function( exports )
     function zoomForPixelSize( pixelSize )
     {
         var i = 30;
-        while( pixelSize > resolution(i) )
+        while( pixelSize > this.resolution(i) )
         {
             i--;
             if( i <= 0 )return 0;
@@ -247,22 +207,22 @@ module.exports = function( exports )
     //returns the lat lng of a pixel X/Y coordinates at given zoom level
     function pixelsToLatLng( px, py, zoom )
     {
-        var meters = pixelsToMeters( px, py, zoom );
-        return metersToLatLon( meters[ 0 ], meters[ 1 ] );
+        var meters = this.pixelsToMeters( px, py, zoom );
+        return this.metersToLatLon( meters[ 0 ], meters[ 1 ] );
     }
 
     //returns the pixel X/Y coordinates at given zoom level from a given lat lng
     function latLngToPixels( lat, lng, zoom )
     {
-        var meters = latLonToMeters( lat, lng, zoom );
-        return metersToPixels( meters[ 0 ], meters[ 1 ], zoom );
+        var meters = this.latLonToMeters( lat, lng, zoom );
+        return this.metersToPixels( meters[ 0 ], meters[ 1 ], zoom );
     }
 
     //retrieves a given tile from a given lat lng
     function latLngToTile( lat, lng, zoom )
     {
-        var meters = latLonToMeters( lat, lng );
-        return metersToTile( meters[ 0 ], meters[ 1 ], zoom );
+        var meters = this.latLonToMeters( lat, lng );
+        return this.metersToTile( meters[ 0 ], meters[ 1 ], zoom );
     }
 
     //encodes the tlie X / Y coordinates & zoom level into a quadkey
@@ -326,25 +286,30 @@ module.exports = function( exports )
 
     // public methods
 
-    exports.init = init;
-    exports.latLonToMeters = latLonToMeters;
-    exports.metersToLatLon = metersToLatLon;
-    exports.pixelsToMeters = pixelsToMeters;
-    exports.metersToPixels = metersToPixels;
-    exports.metersToTile = metersToTile;
-    exports.pixelsToTile = pixelsToTile;
-    exports.latLonToTile = latLonToTile;
-    exports.pixelsToRaster = pixelsToRaster;
-    exports.tileMetersBounds = tileMetersBounds;
-    exports.tilePixelsBounds = tilePixelsBounds;
-    exports.tileLatLngBounds = tileLatLngBounds;
-    exports.resolution = resolution;
-    exports.zoomForPixelSize = zoomForPixelSize;
-    exports.pixelsToLatLng = pixelsToLatLng;
-    exports.latLngToPixels = latLngToPixels;
-    exports.latLngToTile = latLngToTile;
-    exports.tileXYToQuadKey = tileXYToQuadKey;
-    exports.quadKeyToTileXY = quadKeyToTileXY;
-    return exports;
+    var _p = Mercator.prototype;
+    _p.constructor = Mercator;
 
-}( {} );
+    _p.init = init;
+    _p.latLonToMeters = latLonToMeters;
+    _p.metersToLatLon = metersToLatLon;
+    _p.pixelsToMeters = pixelsToMeters;
+    _p.metersToPixels = metersToPixels;
+    _p.metersToTile = metersToTile;
+    _p.pixelsToTile = pixelsToTile;
+    _p.latLonToTile = latLonToTile;
+    _p.pixelsToRaster = pixelsToRaster;
+    _p.tileMetersBounds = tileMetersBounds;
+    _p.tilePixelsBounds = tilePixelsBounds;
+    _p.tileLatLngBounds = tileLatLngBounds;
+    _p.resolution = resolution;
+    _p.zoomForPixelSize = zoomForPixelSize;
+    _p.pixelsToLatLng = pixelsToLatLng;
+    _p.latLngToPixels = latLngToPixels;
+    _p.latLngToTile = latLngToTile;
+    _p.tileXYToQuadKey = tileXYToQuadKey;
+    _p.quadKeyToTileXY = quadKeyToTileXY;
+
+    return Mercator;
+
+
+}();

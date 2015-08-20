@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html>
+<head lang="en">
+    <meta charset="UTF-8">
+
+    <title>light map utils</title>
+    <style>
+
+        body, html
+        {
+            width:100%;
+            height:100%;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+        }
+        canvas{
+            position: absolute;
+            margin: 0;
+        }
+        #controls
+        {
+            position: absolute;
+            padding: 1em;
+        }
+        .btn,
+        .btn:visited{
+
+            color: #000000;
+            border:1px solid #eeeeee;
+            background-color: #FCFCFC;
+
+            display: inline-flex;
+            padding:.5em;
+            font-size: .65em;
+            text-decoration: none;
+            border-radius: 25%;
+
+            -o-transition:.5s;
+            -ms-transition:.5s;
+            -moz-transition:.5s;
+            -webkit-transition:.5s;
+            transition:.5s;
+        }
+        .btn:hover{
+            border:1px solid #BBBBBB;
+            background-color: #DDDDDD;
+            cursor: pointer;
+        }
+    </style>
+
+    <link rel="stylesheet" href="style.css">
+    <meta name="viewport" content="user-scalable=no, width=device-width, initial-scale=1, maximum-scale=1">
+</head>
+<body>
+
+    <script src="light-map.min.js"></script>
+
+    <script>
+
+        var provider,domains;
+
+        if( window.devicePixelRatio == 1 ) {
+            provider = "http://api.tiles.mapbox.com/v4/mapbox.streets/{z}/{x}/{y}.png?access_token=pk.eyJ1IjoiZ3V0ZW55ZSIsImEiOiJmNjJlMDNmYTUyMzNjMzQxZmY4Mzc1ZmFiYmExNjMxOSJ9.xgl1PBwQV9CtwW-usedrcQ";
+        }
+        else
+        {
+            provider = "http://api.tiles.mapbox.com/v4/mapbox.streets/{z}/{x}/{y}@2x.png?access_token=pk.eyJ1IjoiZ3V0ZW55ZSIsImEiOiJmNjJlMDNmYTUyMzNjMzQxZmY4Mzc1ZmFiYmExNjMxOSJ9.xgl1PBwQV9CtwW-usedrcQ";
+        }
+        domains =[""];
+
+        var map = new Map( provider, domains, window.innerWidth, window.innerHeight, 0, 18 );
+        document.body.appendChild( map.canvas );
+
+        ////////////////////////////////////////////
+
+        // mouse handling
+
+        ////////////////////////////////////////////
+
+        var mouse = { x:0, y:0 };
+        var origin = { x:0, y:0 };
+        var delta = { x:0, y:0 };
+
+        var mouseDown = false;
+        function onMouseDown(e){
+
+            if (!e) e = window.event;
+            mouseDown = true;
+            origin.x = mouse.x;
+            origin.y = mouse.y;
+            e.preventDefault();
+        }
+
+        function onMouseUp(e){
+
+            if (!e) e = window.event;
+            mouseDown = false;
+            e.preventDefault();
+        }
+
+        function getMousePosition(e){
+
+            if (!e) e = window.event;
+            if (e.pageX || e.pageY){
+                mouse.x = e.pageX;
+                mouse.y = e.pageY;
+            }
+            else if (e.clientX || e.clientY){
+                mouse.x = e.clientX + document.body.scrollLeft + document.documentElement.scrollLeft;
+                mouse.y = e.clientY + document.body.scrollTop + document.documentElement.scrollTop;
+            }
+
+            var r = e.target.getBoundingClientRect();
+            mouse.x -= r.left;
+            mouse.y -= r.top;
+
+            delta.x = mouse.x - origin.x;
+            delta.y = -( mouse.y - origin.y );
+
+            e.preventDefault();
+
+        }
+
+        function getTouchPosition(e){
+
+            var touch = e.targetTouches[0];
+            var r = e.target.getBoundingClientRect();
+            mouse.x = touch.clientX - r.left;
+            mouse.y = touch.clientY - r.top;
+
+            delta.x = mouse.x - origin.x;
+            delta.y = -( mouse.y - origin.y );
+
+            e.preventDefault();
+
+        }
+
+        function resetMousePosition(e){
+
+            var r = e.target.getBoundingClientRect();
+            mouse.x = r.width * .5;
+            mouse.y = r.height * .5;
+
+        }
+
+        function onResize()
+        {
+            map.setSize(window.innerWidth, window.innerHeight);
+        }
+        window.addEventListener('resize', onResize, false );
+
+
+        ////////////////////////////////////////////
+
+        // end mouse handling
+
+        ////////////////////////////////////////////
+
+        var div ;
+        function update()
+        {
+            //drag
+            if( mouseDown )
+            {
+
+                var speed = .025;
+                var ratio = 1 / Math.pow( 2, map.zoom );
+
+                map.latitude  += speed * ratio * delta.y;
+                map.longitude += speed * ratio * delta.x;
+
+                map.latitude = Math.max( -85, Math.min( map.latitude, 85 ) );
+                map.longitude = Math.max( -180, Math.min( map.longitude, 180 ) );
+
+                map.setView();
+
+            }
+
+        }
+
+        function reset() {
+            map.latitude = map.longitude = map.zoom = 0;
+            map.setView();
+        }
+
+        function zoomIn() {
+            map.zoom++;
+            map.setView();
+        }
+
+        function zoomOut() {
+            map.zoom--;
+            map.setView();
+        }
+
+        function goHome()
+        {
+            var geoSuccess = function(position) {
+
+                map.latitude  = position.coords.latitude;
+                map.longitude = position.coords.longitude;
+                map.zoom = 17;
+                map.setView();
+            };
+            navigator.geolocation.getCurrentPosition(geoSuccess);
+        }
+
+        window.onload = function() {
+
+            var zin = document.getElementById( "zoom-in" );
+            var zout = document.getElementById( "zoom-out" );
+            var loc = document.getElementById( "location" );
+
+            if( 'ontouchstart' in window )
+            {
+                zin.addEventListener('touchstart', zoomIn, false );
+                zout.addEventListener('touchstart', zoomOut, false );
+                loc.addEventListener('touchstart', goHome, false );
+
+                map.canvas.addEventListener('touchmove', getTouchPosition, false );
+                map.canvas.addEventListener('touchend', resetMousePosition, false );
+                map.canvas.addEventListener('touchstart', onMouseDown, false );
+                map.canvas.addEventListener('touchend', onMouseUp, false );
+            }
+            else
+            {
+                zin.addEventListener( 'mousedown', zoomIn, false );
+                zout.addEventListener( 'mousedown', zoomOut, false );
+                loc.addEventListener('mousedown', goHome, false );
+
+                map.canvas.addEventListener('mousemove', getMousePosition, false );
+                map.canvas.addEventListener('mouseleave', resetMousePosition, false );
+                map.canvas.addEventListener('mousedown', onMouseDown, false );
+                map.canvas.addEventListener('mouseup', onMouseUp, false );
+            }
+
+            setInterval( update, 1000 / 60 );
+            onResize();
+
+            var lat = ( Math.random() - .5 ) * 90 ;
+            var lng = ( Math.random() - .5 ) * 180;
+            var zoom = 4;
+            map.setView(lat,lng,zoom);
+        }
+
+
+
+
+    </script>
+
+    <div id="controls">
+
+        <span class="btn" id="zoom-in"><span class="light-map-plus"></span></span><br><br>
+        <span class="btn" id="zoom-out"><span class="light-map-minus"></span></span><br><br>
+        <span class="btn" id="location"><span class="light-map-location"></span></span>
+
+    </div>
+
+</body>
+</html>

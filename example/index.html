@@ -23,6 +23,7 @@
             background-color: #eeeeee;
         }
     </style>
+    <meta name="viewport" content="user-scalable=no, width=device-width, initial-scale=1, maximum-scale=1">
 </head>
 
 <body>
@@ -34,9 +35,13 @@
 
         <label for="provider">TMS provider</label><br>
         <select id="provider" onchange="onChange()" style="width: 100%">
-            <option id="osm" data-url="http://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" data-domains="a,b,c" selected>OSM</option>
+
+
+            <option id="osm" data-url="http://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" data-domains="a,b,c">OSM</option>
             <option id="stamen" data-url="http://stamen-tiles-{s}.a.ssl.fastly.net/watercolor/{z}/{x}/{y}.png" data-domains="a,b,c" >Stamen</option>
             <option id="mq" data-url="http://ttiles{s}.mqcdn.com/tiles/1.0.0/vy/sat/{z}/{x}/{y}.png" data-domains="01,02,03,04">MapQuest</option>
+            <option selected id="mapbox" data-url="http://api.tiles.mapbox.com/v4/mapbox.streets/{z}/{x}/{y}@2x.png?access_token=pk.eyJ1IjoiZ3V0ZW55ZSIsImEiOiJmNjJlMDNmYTUyMzNjMzQxZmY4Mzc1ZmFiYmExNjMxOSJ9.xgl1PBwQV9CtwW-usedrcQ" data-domains="">retina</option>
+
         </select>
 
         <fieldset>
@@ -48,10 +53,10 @@
         <hr>
 
         <label for="lat">latitude</label><br>
-        <input id="lat" type="range" min="-85" max="85" step=".00001" value="0" style="width: 100%" onchange="onChange()" oninput="onChange()">
+        <input id="lat" type="range" min="-85" max="85" step=".00001" value="48.8" style="width: 100%" onchange="onChange()" oninput="onChange()">
 
         <label for="lon">longitude</label><br>
-        <input id="lon" type="range" min="-180" max='180' step=".00001" value="0" style="width: 100%" onchange="onChange()" oninput="onChange()">
+        <input id="lon" type="range" min="-180" max='180' step=".00001" value="2.3" style="width: 100%" onchange="onChange()" oninput="onChange()">
 
         <label for="zoom">zoom level</label><br>
         <input id="zoom" type="range" min="1" max="18" step="1" value="1" style="width: 100%" onchange="onChange()" oninput="onChange()">
@@ -82,7 +87,8 @@
         var copyrights = [
             "&copy; <a href=\"http://www.openstreetmap.org/copyright\">OpenStreetMap</a>"  ,
             "Map tiles by <a href=\"http://stamen.com\">Stamen Design</a>, <a href=\"http://creativecommons.org/licenses/by/3.0\">CC BY 3.0</a> &mdash; Map data &copy; <a href=\"http://www.openstreetmap.org/copyright\">OpenStreetMap</a>",
-            "Tiles Courtesy of <a href=\"http://www.mapquest.com/\">MapQuest</a> &mdash; Portions Courtesy NASA/JPL-Caltech and U.S. Depart. of Agriculture, Farm Service Agency', subdomains: '1234'"
+            "Tiles Courtesy of <a href=\"http://www.mapquest.com/\">MapQuest</a> &mdash; Portions Courtesy NASA/JPL-Caltech and U.S. Depart. of Agriculture, Farm Service Agency', subdomains: '1234'",
+            "Imagery from <a href=\"http://mapbox.com/about/maps/\">MapBox</a> &mdash; Map data &copy; <a href=\"http://www.openstreetmap.org/copyright\">OpenStreetMap</a>,subdomains: 'abcd'"
         ];
 
         function setProvider()
@@ -90,13 +96,14 @@
 
             var e = document.getElementById("provider");
             var provider = e.options[e.selectedIndex];
-            if( map.provider != provider.getAttribute( "data-url" ) )
-            {
-                map.dispose();
-                map.provider = provider.getAttribute( "data-url" );
-                map.domains = provider.getAttribute( "data-domains").split( "," );
-                document.getElementById( 'copyright').innerHTML = copyrights[ e.selectedIndex ];
-            }
+
+            var url = provider.getAttribute( "data-url");
+            var domains = provider.getAttribute( "data-domains").split( "," );
+            var tileSize = url.lastIndexOf( "@2x" ) == -1 ? 256 : 512;
+
+            map.setProvider( url, domains, tileSize );
+
+            document.getElementById( 'copyright').innerHTML = copyrights[ e.selectedIndex ];
 
         }
 
@@ -114,9 +121,8 @@
             //sets the size of the map
             if( document.getElementById("width").value != map.width ||  document.getElementById("height").value != map.height )
             {
-                map.setViewRect( 0,0, document.getElementById("width").value, document.getElementById("height").value );
+                map.setSize( document.getElementById("width").value, document.getElementById("height").value );
             }
-
             map.setView();
 
         }
@@ -150,7 +156,6 @@
 
         //init the map
         var map = new Map( "", "", 512,512, 0, 18 );
-
         map.canvas.id = "map";
         document.body.appendChild( map.canvas );
 
