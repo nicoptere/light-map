@@ -184,33 +184,6 @@ module.exports = function() {
     }
 
     /**
-     * gives the camera's 'altitude' from the center of the earth at a given latitude
-     * @param latitude
-     * @param zoomlevel
-     * @returns {*}
-     */
-    function altitude( latitude, zoomlevel )
-    {
-        /*
-         The distance represented by one pixel (S) is given by
-
-         S = C * cos( y )/ 2 ^ zoomlevel
-
-         where
-         latitude: is the latitude of where you're interested in the scale.
-         zoomlevel: is the zoom level ( typically a value between 0 & 21 )
-
-         and
-
-         C is the (equatorial) circumference of the Earth
-         earthRadius = 6378137 ( earth radius in meters )
-         //*/
-        var C = Math.PI * 2 * earthRadius;
-        return earthRadius + ( C * Math.cos( latitude ) / Math.pow( 2, zoomlevel ) * ( this.tileSize / 256 ) );
-
-    }
-
-    /**
      * untested...
      * @param pixelSize
      * @returns {number}

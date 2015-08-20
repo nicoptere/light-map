@@ -1035,33 +1035,6 @@ module.exports = function() {
     }
 
     /**
-     * gives the camera's 'altitude' from the center of the earth at a given latitude
-     * @param latitude
-     * @param zoomlevel
-     * @returns {*}
-     */
-    function altitude( latitude, zoomlevel )
-    {
-        /*
-         The distance represented by one pixel (S) is given by
-
-         S = C * cos( y )/ 2 ^ zoomlevel
-
-         where
-         latitude: is the latitude of where you're interested in the scale.
-         zoomlevel: is the zoom level ( typically a value between 0 & 21 )
-
-         and
-
-         C is the (equatorial) circumference of the Earth
-         earthRadius = 6378137 ( earth radius in meters )
-         //*/
-        var C = Math.PI * 2 * earthRadius;
-        return earthRadius + ( C * Math.cos( latitude ) / Math.pow( 2, zoomlevel ) * ( this.tileSize / 256 ) );
-
-    }
-
-    /**
      * untested...
      * @param pixelSize
      * @returns {number}
@@ -1401,7 +1374,7 @@ module.exports = function()
             if(     e.target.width != scope.map.mercator.tileSize
             ||      e.target.height != scope.map.mercator.tileSize )
             {
-                scope.rescaleImage(e.target);
+                scope.rescaleImage(e.target, scope.map.scale );
             }
 
 
@@ -1418,19 +1391,37 @@ module.exports = function()
      * rescales the image so that it fits the map's scale
      * @param img input image
      */
-    function rescaleImage( img )//, ow, oh, tw, th )
+    function rescaleImage( img, scale )
     {
 
-        console.log( this.map.scale, img.width, this.map.mercator.tileSize );
         var canvas = document.createElement( 'canvas' );
-        var w = canvas.width = this.map.mercator.tileSize;
-        var h = canvas.height = this.map.mercator.tileSize;
+        var w = canvas.width  = img.width ;
+        var h = canvas.height = img.height;
         var ctx = canvas.getContext("2d");
-        ctx.drawImage( img, 0,0,w,h );
 
+        //collect image data
+        ctx.drawImage( img, 0,0,w,h );
+        var srcData = ctx.getImageData( 0,0,w,h).data;
 
         //nearest neighbours upscale
-        //var imgData = ctx.
+        console.time( "upscale" );
+        canvas.width  = 512;
+        canvas.height = 512;
+        for( var i = 0; i < srcData.length; i+=4 )
+        {
+            var r = srcData[i  ];
+            var g = srcData[i+1];
+            var b = srcData[i+2];
+            var a = srcData[i+3];
+
+            var x = ( i/4 % w ) * scale;
+            var y = ~~( i/4 / w ) * scale;
+            ctx.fillStyle = "rgba("+r+","+g+","+b+","+(a/0xFF)+")";
+            ctx.fillRect( x,y, scale,scale );
+        }
+        console.timeEnd( "upscale" );
+
+        //replace img with canvas
         delete this.img;
         this.img = canvas;
 
