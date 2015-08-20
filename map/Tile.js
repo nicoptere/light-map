@@ -130,11 +130,47 @@ module.exports = function()
         this.img.tile = this;
         this.img.crossOrigin = 'anonymous';
         this.img.onload = function (e) {
+
             scope.loaded = true;
+
+            //gracious fallback for retina in case tiles are not big enough
+
+            if(     e.target.width != scope.map.mercator.tileSize
+            ||      e.target.height != scope.map.mercator.tileSize )
+            {
+                scope.rescaleImage(e.target);
+            }
+
+
+
             scope.eventEmitter.emit( Tile.ON_TILE_LOADED, scope );
+
+
         };
         this.img.setAttribute("key", this.key);
         this.img.src = this.url;
+    }
+
+    /**
+     * rescales the image so that it fits the map's scale
+     * @param img input image
+     */
+    function rescaleImage( img )//, ow, oh, tw, th )
+    {
+
+        console.log( this.map.scale, img.width, this.map.mercator.tileSize );
+        var canvas = document.createElement( 'canvas' );
+        var w = canvas.width = this.map.mercator.tileSize;
+        var h = canvas.height = this.map.mercator.tileSize;
+        var ctx = canvas.getContext("2d");
+        ctx.drawImage( img, 0,0,w,h );
+
+
+        //nearest neighbours upscale
+        //var imgData = ctx.
+        delete this.img;
+        this.img = canvas;
+
     }
 
     function getMapUrl(x, y, zl)
@@ -200,6 +236,7 @@ module.exports = function()
     _p.initFromTileXY = initFromTileXY;
     _p.initFromQuadKey = initFromQuadKey;
     _p.load = load;
+    _p.rescaleImage = rescaleImage;
     _p.getMapUrl = getMapUrl;
     _p.containsLatLng = containsLatLng;
     _p.isContained = isContained;
