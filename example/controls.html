@@ -157,6 +157,7 @@
         function onResize()
         {
             map.setSize(window.innerWidth, window.innerHeight);
+            map.setView();
         }
         window.addEventListener('resize', onResize, false );
 
@@ -191,6 +192,7 @@
 
         function reset() {
             map.latitude = map.longitude = map.zoom = 0;
+            delta.x = delta.y = 0;
             map.setView();
         }
 
@@ -246,12 +248,11 @@
             }
 
             setInterval( update, 1000 / 60 );
-            onResize();
 
-            var lat = ( Math.random() - .5 ) * 90 ;
-            var lng = ( Math.random() - .5 ) * 180;
-            var zoom = 4;
-            map.setView(lat,lng,zoom);
+            map.latitude = ( Math.random() - .5 ) * 90 ;
+            map.longitude = ( Math.random() - .5 ) * 180;
+            map.zoom = 4;
+            onResize();
         }
 
 
