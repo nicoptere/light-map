@@ -213,7 +213,7 @@ map_provider.domains = provider.getAttribute( "data-domains").split( "," );</pre
   <li><a href="http://nicoptere.github.io/light-map/example/">an example with the most common methods</a> let's you set the lat/lon/zoom, change the width/height of the canvas and monitor the load progress.</li>
   <li><a href="http://nicoptere.github.io/light-map/example/retina.html">an example of retina support</a> first I thought it wasn't much but it seems to be a big deal. it's based on the devicePixelRatio, ideally you should use a @2x provider but I did an internal nearest neighbour resize.</li>
   <li><a href="http://nicoptere.github.io/light-map/example/controls.html">a basic example of controls</a> you should be able to drag the map around.</li>
-  <li>as the map output is a Canvas2D, this is <a href="http://nicoptere.github.io/light-map/example/basic.html">an example with a fixed setup</a> that shows how to post process the output (adding a vignette).</li>
+  <li><a href="http://nicoptere.github.io/light-map/example/basic.html">an example with a vignette</a> as the map output is a Canvas2D, this shows how to post process the output.</li>
 </ul>
   <p><strong>warning:</strong> when you change the lat/lon values at high zoom levels, there will be MANY images queued for loading. use lon/lat with caution, at rather low zoom levels</p>
 
