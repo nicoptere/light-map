@@ -3,4 +3,7 @@
 node_modules/*
 /tmp
 .npmignore
+/javascripts
+/params.json
+/stylesheets
 /map/Controls.js
