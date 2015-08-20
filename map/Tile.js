@@ -60,7 +60,7 @@ module.exports = function()
         this.viewRectPosition = [0,0];
         this.latLngBounds = undef;
 
-        this.img = ( this.map.isNode ) ? {} : new Image();
+        this.img = new Image();
         this.url = "";
 
         this.eventEmitter = new events.EventEmitter();
@@ -119,32 +119,30 @@ module.exports = function()
 
     function load( callback )
     {
-
-        if( this.map.isNode ){
-
-            this.eventEmitter.emit( Tile.ON_TILE_LOADED, this );
+        if( !this.valid )
+        {
+            console.log( "invalid tile, not loading");
             return;
         }
 
         var scope = this;
+
         this.img.tile = this;
         this.img.crossOrigin = 'anonymous';
         this.img.onload = function (e) {
 
-            scope.loaded = true;
-
-            //gracious fallback for retina in case tiles are not big enough
-
-            if(     e.target.width != scope.map.mercator.tileSize
-            ||      e.target.height != scope.map.mercator.tileSize )
+            if( scope.map == undef )
             {
-                scope.rescaleImage(e.target, scope.map.scale );
+                console.warn( 'loaded Tile has no associated map > ', scope.key, scope.zoom );
+                return;
             }
 
+            if( scope.map.mercator.tileSize != e.target.width ){
+                scope.rescaleImage( e.target, scope.map.mercator.tileSize, window.devicePixelRatio );
+            }
 
-
+            scope.loaded = true;
             scope.eventEmitter.emit( Tile.ON_TILE_LOADED, scope );
-
 
         };
         this.img.setAttribute("key", this.key);
@@ -154,36 +152,46 @@ module.exports = function()
     /**
      * rescales the image so that it fits the map's scale
      * @param img input image
+     * @param tileSize destination tileSize
+     * @param scale scale factor
      */
-    function rescaleImage( img, scale )
+    function rescaleImage( img, tileSize, scale )
     {
 
         var canvas = document.createElement( 'canvas' );
         var w = canvas.width  = img.width ;
         var h = canvas.height = img.height;
-        var ctx = canvas.getContext("2d");
 
         //collect image data
+        var ctx = canvas.getContext("2d");
         ctx.drawImage( img, 0,0,w,h );
         var srcData = ctx.getImageData( 0,0,w,h).data;
 
+        //result
+        var imgOut = ctx.createImageData(tileSize,tileSize);
+        var out = imgOut.data;
+
         //nearest neighbours upscale
-        console.time( "upscale" );
-        canvas.width  = 512;
-        canvas.height = 512;
         for( var i = 0; i < srcData.length; i+=4 )
         {
-            var r = srcData[i  ];
-            var g = srcData[i+1];
-            var b = srcData[i+2];
-            var a = srcData[i+3];
-
             var x = ( i/4 % w ) * scale;
             var y = ~~( i/4 / w ) * scale;
-            ctx.fillStyle = "rgba("+r+","+g+","+b+","+(a/0xFF)+")";
-            ctx.fillRect( x,y, scale,scale );
+            for( var j = x; j <= x + scale; j++ )
+            {
+                if( x >= tileSize )continue;
+                for( var k = y; k <= y + scale; k++ ) {
+
+                    var id = ( ~~( j ) + ~~( k ) * tileSize ) * 4;
+                    out[id]     = srcData[i  ];
+                    out[id + 1] = srcData[i+1];
+                    out[id + 2] = srcData[i+2];
+                    out[id + 3] = srcData[i+3];
+                }
+            }
         }
-        console.timeEnd( "upscale" );
+        canvas.width  = canvas.height = tileSize;
+        imgOut.data = out;
+        ctx.putImageData(imgOut,0,0);
 
         //replace img with canvas
         delete this.img;

@@ -23,11 +23,12 @@
             background-color: #eeeeee;
         }
     </style>
+    <meta name="viewport" content="user-scalable=no, width=device-width, initial-scale=1, maximum-scale=1">
 </head>
 
 <body>
 
-    <script src="light-map.js"></script>
+    <script src="light-map.min.js"></script>
     <fieldset id="settings">
 
         <legend>settings</legend>
@@ -52,10 +53,10 @@
         <hr>
 
         <label for="lat">latitude</label><br>
-        <input id="lat" type="range" min="-85" max="85" step=".00001" value="0" style="width: 100%" onchange="onChange()" oninput="onChange()">
+        <input id="lat" type="range" min="-85" max="85" step=".00001" value="48.8" style="width: 100%" onchange="onChange()" oninput="onChange()">
 
         <label for="lon">longitude</label><br>
-        <input id="lon" type="range" min="-180" max='180' step=".00001" value="0" style="width: 100%" onchange="onChange()" oninput="onChange()">
+        <input id="lon" type="range" min="-180" max='180' step=".00001" value="2.3" style="width: 100%" onchange="onChange()" oninput="onChange()">
 
         <label for="zoom">zoom level</label><br>
         <input id="zoom" type="range" min="1" max="18" step="1" value="1" style="width: 100%" onchange="onChange()" oninput="onChange()">
@@ -95,13 +96,14 @@
 
             var e = document.getElementById("provider");
             var provider = e.options[e.selectedIndex];
-            if( map.provider != provider.getAttribute( "data-url" ) )
-            {
-                map.dispose();
-                map.provider = provider.getAttribute( "data-url" );
-                map.domains = provider.getAttribute( "data-domains").split( "," );
-                document.getElementById( 'copyright').innerHTML = copyrights[ e.selectedIndex ];
-            }
+
+            var url = provider.getAttribute( "data-url");
+            var domains = provider.getAttribute( "data-domains").split( "," );
+            var tileSize = url.lastIndexOf( "@2x" ) == -1 ? 256 : 512;
+
+            map.setProvider( url, domains, tileSize );
+
+            document.getElementById( 'copyright').innerHTML = copyrights[ e.selectedIndex ];
 
         }
 

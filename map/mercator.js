@@ -71,6 +71,11 @@ module.exports = function() {
 
     function Mercator( tile_size, earth_radius )
     {
+        this.init(tile_size, earth_radius);
+    }
+
+    function init(tile_size, earth_radius)
+    {
         //Initialize the TMS Global Mercator pyramid
         this.tileSize = tile_size || 256;
 
@@ -81,7 +86,6 @@ module.exports = function() {
 
         // 20037508.342789244
         this.originShift = 2 * Math.PI * this.earthRadius / 2.0;
-        console.log( "mercator init ", this.tileSize, this.earthRadius );
 
     }
 
@@ -285,6 +289,7 @@ module.exports = function() {
     var _p = Mercator.prototype;
     _p.constructor = Mercator;
 
+    _p.init = init;
     _p.latLonToMeters = latLonToMeters;
     _p.metersToLatLon = metersToLatLon;
     _p.pixelsToMeters = pixelsToMeters;

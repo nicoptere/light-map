@@ -29,11 +29,13 @@
     "events":"1.0.2"
   },
   "devDependencies": {
+    "browserify" : "^11.0.0",
     "uglifyjs": "^2.4.10"
   },
 
   "scripts": {
-    "bundle": "browserify map/Map.js --standalone Map -o example/light-map.js",
+    "debug": "browserify map/Map.js --standalone Map -o example/light-map.min.js",
+    "bundle": "browserify map/Map.js --standalone Map -o bin/light-map.js",
     "uglify": "uglifyjs bin/light-map.js -m -c -screw-ie8 > example/light-map.min.js",
     "build": "npm run bundle && npm run uglify"
   },

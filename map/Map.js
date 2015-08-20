@@ -8,11 +8,9 @@ module.exports = function(){
 
     function Map( provider, domains, width, height, minZoom, maxZoom ){
 
-        this.utils = utils;
 
-        //prvoders
-        this.provider = provider || "http://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png";
-        this.domains = domains || ["a","b","c"];
+        //sets the scale of the map, handles retina display
+        this.mercator = new Mercator( 256 );
 
         //events
         this.eventEmitter  = new events.EventEmitter();
@@ -33,27 +31,18 @@ module.exports = function(){
         this.keys = [];
         this.loadedTiles = [];
 
-        //sets the scale of the map, handles retina display
-        this.scale = window.devicePixelRatio || 1;
-        this.retina = this.scale != 1;
-        this.mercator = new Mercator( 256 * this.scale );
-
-        //create domElement if running in DOM
-        this.isNode = ( typeof window === 'undefined' );
-        if( !this.isNode ){
-
-            this.canvas = document.createElement("canvas");
-            this.ctx = this.canvas.getContext("2d");
-
-            // disable smoothing of retina scaled images (i.e. use a neirest-neighbour filter)
-            this.ctx.imageSmoothingEnabled      = !this.retina;
-            this.ctx.mozImageSmoothingEnabled   = !this.retina;
-            this.ctx.msImageSmoothingEnabled    = !this.retina;
-        }
+        //create domElement
+        this.canvas = document.createElement("canvas");
+        this.ctx = this.canvas.getContext("2d");
 
         //viewRect
-        this.setSize( width, height, true );
+        this.setSize( width, height );
 
+        //providers
+        this.setProvider( provider, domains, 256 * window.devicePixelRatio );
+
+        //makes the math utils available
+        this.utils = utils;
     }
 
     //getters / setters
@@ -65,7 +54,29 @@ module.exports = function(){
         get maxZoom(){return this._maxZoom; }, set maxZoom( value ){this._maxZoom = value; }
 
     };
+    /**
+     * changes the Tile provider
+     * @param provider url
+     * @param domains sub domains
+     * @param tileSize
+     */
+    function setProvider(  provider, domains, tileSize )
+    {
+        if( this.provider == provider )return;
 
+        this.dispose();
+
+        this.provider = provider || "http://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png";
+        this.domains = domains || ["a","b","c"];
+        this.scale = tileSize / 256;
+
+        this.mercator = new Mercator( 256 * this.scale );
+
+        this.setSize( this._width, this._height );
+
+        //this.setView();
+
+    }
     /**
      * sets the view rect size
      * @param w
@@ -74,8 +85,6 @@ module.exports = function(){
      */
     function setSize( w,h )
     {
-
-
         this._width = w || 256;
         this._height = h || 256;
 
@@ -88,41 +97,29 @@ module.exports = function(){
             this.canvas.height = this.viewRect.h * this.scale;
 
             // and the actual size
-            this.canvas.style.width  = this.viewRect.w + 'px';
-            this.canvas.style.height = this.viewRect.h + 'px';
+            this.canvas.style.width  = ( this.viewRect.w ) + 'px';
+            this.canvas.style.height = ( this.viewRect.h ) + 'px';
         }
-        this.setView(this.latitude, this.longitude, this.zoom );
         
     }
 
-    function renderTiles()
-    {
-        if( this.isNode )return;
+    function renderTiles() {
 
-        this.ctx.clearRect( 0, 0, this.viewRect.w, this.viewRect.h );
-
-        //this.ctx.restore();
-        //this.ctx.save();
-        //if(this.retina)
-        //{
-        //    this.ctx.scale( this.scale, this.scale );
-        //}
+        this.ctx.clearRect( 0, 0, this.canvas.width, this.canvas.height );
 
         var c = this.getViewRectCenterPixels();
         var ctx = this.ctx;
         var zoom = this.zoom;
         var viewRect = this.viewRect;
-        var tileSize = this.mercator.tileSize;
         var scale = this.scale;
         this.loadedTiles.forEach(function(tile)
         {
             if( tile.zoom == zoom )
             {
-                var px = viewRect.x * scale +  viewRect.w / 2 * scale + ( tile.px - c[ 0 ] );
-                var py = viewRect.y * scale +  viewRect.h / 2 * scale + ( tile.py - c[ 1 ] );
+                var px = viewRect.w / 2 * scale + ( tile.px - c[ 0 ] );
+                var py = viewRect.h / 2 * scale + ( tile.py - c[ 1 ] );
 
                 ctx.drawImage( tile.img, Math.round( px ), Math.round( py ) );
-                ctx.strokeRect( Math.round( px ), Math.round( py ), tileSize- 1, tileSize - 1 );
 
             }
         });
@@ -135,18 +132,9 @@ module.exports = function(){
      * returns an array of the latitude/longitude in degrees
      * @returns {*[]}
      */
-    function getCenter(){
+    function getLatLng(){
 
         return [ this.latitude, this.longitude ];
-    }
-
-    /**
-     * returns an object of the latitude/longitude in degrees
-     * @returns {*[]}
-     */
-    function getCenterLatLng(){
-
-        return { lat:this.latitude, lng:this.longitude };
     }
 
     /**
@@ -156,10 +144,10 @@ module.exports = function(){
     function viewRectToLatLng( lat, lng, zoom ){
 
         var c = this.mercator.latLngToPixels( -lat, lng, zoom  );
-        var w = this.viewRect.w;
-        var h = this.viewRect.h;
-        var tl = this.mercator.pixelsToLatLng( c[ 0 ] - w / 2, c[ 1 ] - h / 2, zoom );
-        var br = this.mercator.pixelsToLatLng( c[ 0 ] + w / 2, c[ 1 ] + h / 2, zoom );
+        var w = this.viewRect.w * this.scale;
+        var h = this.viewRect.h * this.scale;
+        var tl = this.mercator.pixelsToLatLng( c[ 0 ] - w / 2  * this.scale, c[ 1 ] - h / 2 * this.scale, zoom );
+        var br = this.mercator.pixelsToLatLng( c[ 0 ] + w / 2  * this.scale, c[ 1 ] + h / 2 * this.scale, zoom );
         return [ -tl[ 0 ], tl[ 1 ], -br[ 0 ], br[ 1 ] ];
 
     }
@@ -184,16 +172,6 @@ module.exports = function(){
      * returns the bounds of the view rect as rectangle (Rect object) of pixels in absolute coordinates
      * @returns new Rect( absolute x, absolute y, width, height )
      */
-    function viewRectToPixels( lat, lng, zoom ){
-
-        var c = this.mercator.latLngToPixels( -lat, lng, zoom  );
-        return new Rect( c[ 0 ]-this.viewRect.w/2, c[ 1 ]-this.viewRect.h/2, this.viewRect.w, this.viewRect.h );
-    }
-
-    /**
-     * returns the bounds of the view rect as rectangle (Rect object) of pixels in absolute coordinates
-     * @returns new Rect( absolute x, absolute y, width, height )
-     */
     function canvasPixelToLatLng( px, py, zoom ){
 
         var c = this.mercator.latLngToPixels( -ma, lng, zoom || map.zoom );
@@ -206,7 +184,7 @@ module.exports = function(){
      */
     function getViewRectCenter()
     {
-        var bounds = viewRectToLatLng( this.latitude, this.longitude, this.zoom, this.viewRect);
+        var bounds = this.viewRectToLatLng( this.latitude, this.longitude, this.zoom, this.viewRect);
         return [ utils.map(.5,0,1, -bounds[0], -bounds[2] ), utils.map(.5,0,1, bounds[1], bounds[3] )];
     }
 
@@ -217,53 +195,6 @@ module.exports = function(){
     function getViewRectCenterPixels()
     {
         return this.mercator.latLngToPixels( -this.latitude, this.longitude, this.zoom );
-    }
-
-    /**
-     * returns the absolute x/y coordinates of the viewrect top left corner in pixels
-     * @returns {*[]}
-     */
-    function getViewRctTopLeft()
-    {
-        var c = this.mercator.latLngToPixels( -this.latitude, this.longitude, this.zoom  );
-        var w = this.viewRect.w;
-        var h = this.viewRect.h;
-        return this.mercator.pixelsToLatLng( c[ 0 ] - w / 2, c[ 1 ] - h / 2, this.zoom );
-    }
-
-    /**
-     * retrieves a tile by its quadkey
-     * @param key
-     * @returns {*}
-     */
-    function getTileByKey( key )
-    {
-        for( var k = 0; k < this.tiles.length; k++ )
-        {
-            if( this.tiles[ k ].key == key )
-            {
-                return this.tiles[ k ];
-            }
-        }
-        return null;
-    }
-
-    /**
-     * returns the X / Y index of the top left tile in the view rect
-     * @param zoom
-     * @returns {*[]}
-     */
-    function viewRectTilesDelta(zoom)
-    {
-        zoom = zoom || this.zoom;
-        var bounds = this.viewRectToLatLng( this.latitude, this.longitude, zoom, this.viewRect);
-        var tl = this.mercator.latLonToTile(-bounds[0], bounds[1], zoom);
-        var br = this.mercator.latLonToTile(-bounds[2], bounds[3], zoom);
-        var u = 0;
-        var v = 0;
-        for (var i = tl[0]; i <= br[0]; i++) u++;
-        for (var j = tl[1]; j <= br[1]; j++) v++;
-        return [ bounds[0], bounds[1], u, v ];
     }
 
     /**
@@ -311,10 +242,6 @@ module.exports = function(){
                             break;
                         }
                     }
-                    //if (exists == false) {
-                    //    tiles.push(new Tile(this, key));
-                    //    this.keys.push(key);
-                    //}
                 }
                 v++;
             }
@@ -448,13 +375,23 @@ module.exports = function(){
     function dispose()
     {
         var scope = this;
-        this.tiles.forEach( function(tile){ tile.eventEmitter.removeListener( Tile.ON_TILE_LOADED, scope.appendTile ); tile.dispose(); });
+        this.tiles.forEach( function(tile){ tile.eventEmitter.removeListener( Tile.ON_TILE_LOADED, scope.appendTile ); tile.valid = false; tile.dispose(); });
         this.loadedTiles.forEach( function(tile){ tile.dispose(); });
 
         this.tiles = [];
         this.loadedTiles = [];
         this.keys = [];
 
+    }
+
+    /**
+     * returns the bounds of the view rect as rectangle (Rect object) of pixels in absolute coordinates
+     * @returns {*[absolute x, absolute y, width, height ]}
+     */
+    function viewRectToPixels( lat, lng, zoom ){
+
+        var c = this.mercator.latLngToPixels( -lat, lng, zoom  );
+        return new Rect( c[ 0 ], c[ 1 ], this.viewRect.w, this.viewRect.h );
     }
 
     //Map constants
@@ -466,26 +403,22 @@ module.exports = function(){
     var _p = Map.prototype;
     _p.constructor = Map;
 
-    _p.setSize                  = setSize;
+    _p.setProvider             = setProvider;
+    _p.setSize                 = setSize;
     _p.renderTiles             = renderTiles;
     _p.latLngToPixels          = latLngToPixels;
-    _p.getCenter               = getCenter;
-    _p.getCenterLatLng         = getCenterLatLng;
     _p.viewRectToLatLng        = viewRectToLatLng;
     _p.getViewPortBounds       = getViewPortBounds;
-    _p.viewRectToPixels        = viewRectToPixels;
     _p.getViewRectCenter       = getViewRectCenter;
     _p.getViewRectCenterPixels = getViewRectCenterPixels;
-    _p.getViewRctTopLeft       = getViewRctTopLeft;
     _p.setView                 = setView;
-    _p.getTileByKey            = getTileByKey;
-    _p.viewRectTilesDelta      = viewRectTilesDelta;
     _p.viewRectTiles           = viewRectTiles;
     _p.getVisibleTiles         = getVisibleTiles;
     _p.load                    = load;
     _p.appendTile              = appendTile;
     _p.resolution              = resolution;
     _p.dispose                 = dispose;
+    _p.viewRectToPixels = viewRectToPixels;
 
     return Map;
 
