@@ -86,7 +86,7 @@
         function onMouseDown(e){
 
             if (!e) e = window.event;
-            console.log( mouse )
+
             mouseDown = true;
             if( mouse.x == -1 ){
                 if( 'ontouchstart' in window )
@@ -96,7 +96,6 @@
                 {
                     getMousePosition(e);
                 }
-            console.log( "->", mouse )
             }
             origin.x = mouse.x;
             origin.y = mouse.y;
