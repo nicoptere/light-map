@@ -18,7 +18,7 @@
     <div class="wrapper">
       <header>
         <h1>Light-map</h1>
-        <p>a light-weight TMS viewer</p>
+        <p>a light-weight XYZ viewer</p>
 
         <p class="view"><a href="https://github.com/nicoptere/light-map">View the Project on GitHub <small>nicoptere/light-map</small></a></p>
 
@@ -34,7 +34,7 @@
 
 
         <a id="welcome-to-github-pages" class="anchor" href="#welcome-to-github-pages" aria-hidden="true"><span class="octicon octicon-link"></span></a>foreword</h3>
-        <p>the purpose of this lib is to provide a minimal engine to display a TMS (Tile Map Service) like OSM, MapBox, MapQuest...
+        <p>the purpose of this lib is to provide a minimal engine to display a XYZ (Tile Map Service) like OSM, MapBox, MapQuest...
         there are already many APIs out there such as <a href="http://leafletjs.com/">leaflet</a> and they work fine, they are very comprehensive, well tested so I'd recommend them for a mainstream use.</p>
         <p>I found it impractical to work with for "advanced" use cases though ; I needed to draw the view in a canvas (something leaflet wasn't designed for) and had to hack my way so much so that I ended up rebuilding an engine from scratch.</p>
         <p>it's rough around the edges, not fully tested and has lots of room for improvement. in a word, it's not for the faint of the heart.</p>
@@ -63,7 +63,7 @@ map.setView(0,0,1);</pre>
     var map_basic = new Map( "http://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", "a,b,c".split( ',' ), 0,0,0,18 );
     map_basic.canvas = document.getElementById("basic");
     map_basic.ctx = map_basic.canvas.getContext("2d");
-    map_basic.setViewRect(0,0,512,512);
+    map_basic.setSize(512,512);
     map_basic.setView(0,0,1);
 
     function goHome()
@@ -79,13 +79,13 @@ map.setView(0,0,1);</pre>
     }
 
 </script>
-the above is an actual map, loaded from the <a href=\"http://www.openstreetmap.org/copyright\">OpenStreetMap</a> TMS.<br><br>
+the above is an actual map, loaded from the <a href=\"http://www.openstreetmap.org/copyright\">OpenStreetMap</a> XYZ.<br><br>
 
 <p>the <strong>Map</strong> constructor takes 6 arguments which are respectively:
 </p>
 
     <ul>
-          <li><strong>provider</strong>: the urls of the <a href="#TMS">TMS</a></li>
+          <li><strong>provider</strong>: the urls of the <a href="#XYZ">XYZ</a></li>
           <li><strong>domains</strong>: an array of domains to fetch images from</li>
           <li><strong>width</strong>: the width of the view rect</li>
           <li><strong>height</strong>: the height of the view rect</li>
@@ -97,7 +97,7 @@ the above is an actual map, loaded from the <a href=\"http://www.openstreetmap.o
 
 <pre>map.canvas = document.getElementById("myCanvas");
 map.ctx = map.canvas.getContext("2d");
-map.setViewRect(0,0,width,height);</pre>
+map.setSize(width,height);</pre>
 
 <p>now try to push this button (& allow geolocation)</p>
 <button style="width:100%;" onmousedown="goHome()">go home</button><br><br>
@@ -123,16 +123,16 @@ usually, you'll use <strong>setView( lat, lon, zoom)</strong> directly where <st
 
 </p>
 
-<h3><a id="TMS" class="anchor" href="#TMS" aria-hidden="true"><span class="octicon octicon-link"></span></a>TMS?</h3>
-<p>there are more and more TMS providers made available, <a href="http://leaflet-extras.github.io/leaflet-providers/preview/">here's a list that gives an idea of the potential</a>.
-if you have a shallow knowledge of what a TMS is, don't worry, it's quite simple ; a map is decomposed into a <em>pyramid</em> of tiles and you're at the top of the pyramid.</p>
+<h3><a id="XYZ" class="anchor" href="#XYZ" aria-hidden="true"><span class="octicon octicon-link"></span></a>XYZ?</h3>
+<p>there are more and more XYZ providers made available, <a href="http://leaflet-extras.github.io/leaflet-providers/preview/">here's a list that gives an idea of the potential</a>.
+if you have a shallow knowledge of what a XYZ is, don't worry, it's quite simple ; a map is decomposed into a <em>pyramid</em> of tiles and you're at the top of the pyramid.</p>
 <p>each zoom level is a "slice" of that pyramid and each time you "zoom in" - when you go one level down in the pyramid - each tile is subdivided into 4 tiles with twice more detail.</p>
 
 <p>so the amount of tiles grows quickly: at a <strong>zoom level 0</strong> - the top of the pyramid - only <strong>one tile</strong> is necessary to represent the world, at a zoom level of <strong>12</strong>, you'll need <strong>4.096 tiles</strong> to represent the same area, at level <strong>16</strong>, you'll need <strong>65.536 tiles</strong> which is the number of pixels of the top level tile.</p>
 <p>if you go up to <strong>level 21</strong>, <strong>2.097.152 tiles</strong> will be necessary to represent the original, unique, top of the pyramid tile.</p>
 
-<p>that's quite a lot so usually, the TMS are bound between levels 0 & 18. on the server, the tiles are stored in a specific way that allows for quick lookup. if you want to know more, there is this excellent article: <a href="https://msdn.microsoft.com/en-us/library/bb259689.aspx">Bing Maps Tile System</a> </p>
-<p>note that due to the large amount of tiles to process, some TMS will not allow high zoom level.</p>
+<p>that's quite a lot so usually, the XYZ are bound between levels 0 & 18. on the server, the tiles are stored in a specific way that allows for quick lookup. if you want to know more, there is this excellent article: <a href="https://msdn.microsoft.com/en-us/library/bb259689.aspx">Bing Maps Tile System</a> </p>
+<p>note that due to the large amount of tiles to process, some XYZ will not allow high zoom level.</p>
 
           <p>usually, a provider url will look something like:</p>
           <pre>http://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png</pre>
@@ -149,7 +149,7 @@ if you have a shallow knowledge of what a TMS is, don't worry, it's quite simple
 <p>you can change the provider on the fly like so:</p>
 
 <fieldset style="border: none;">
-    <label for="provider">TMS provider</label><br>
+    <label for="provider">XYZ provider</label><br>
     <select id="provider" onchange="setProvider()" style="width: 100%">
       <option id="osm" data-url="http://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" data-domains="a,b,c" selected>OSM</option>
       <option id="stamen" data-url="http://stamen-tiles-{s}.a.ssl.fastly.net/watercolor/{z}/{x}/{y}.png" data-domains="a,b,c" >Stamen</option>
@@ -192,7 +192,7 @@ if you have a shallow knowledge of what a TMS is, don't worry, it's quite simple
     map_provider.canvas = document.getElementById("c_provider");
     map_provider.ctx = map_provider.canvas.getContext("2d");
 
-    map_provider.setViewRect(0,0,512,512);
+    map_provider.setSize(512,512);
     map_provider.setView(0,0,1);
 
 </script>
@@ -209,6 +209,8 @@ map_provider.domains = provider.getAttribute( "data-domains").split( "," );</pre
 
 <ul>
   <li><a href="http://nicoptere.github.io/light-map/example/">an example with the most common methods</a> let's you set the lat/lon/zoom, change the width/height of the canvas and monitor the load progress.</li>
+  <li><a href="http://nicoptere.github.io/light-map/example/retina.html">an example of retina support</a> first I thought it wasn't much but it seems to be a big deal. it's based on the devicePixelRatio, ideally you should use a @2x provider but I did an internal nearest neighbour resize.</li>
+  <li><a href="http://nicoptere.github.io/light-map/example/controls.html">a basic example of controls</a> you should be able to drag the map around.</li>
   <li>as the map output is a Canvas2D, this is <a href="http://nicoptere.github.io/light-map/example/basic.html">an example with a fixed setup</a> that shows how to post process the output (adding a vignette).</li>
 </ul>
   <p><strong>warning:</strong> when you change the lat/lon values at high zoom levels, there will be MANY images queued for loading. use lon/lat with caution, at rather low zoom levels</p>
