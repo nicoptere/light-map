@@ -178,9 +178,15 @@
                 var speed = .025;
                 var ratio = 1 / Math.pow( 2, map.zoom );
 
-                map.latitude  += speed * ratio * delta.y;
-                map.longitude += speed * ratio * delta.x;
-
+                if( 'ontouchstart' in window ) {
+                    map.latitude  -= speed * ratio * delta.y;
+                    map.longitude -= speed * ratio * delta.x;
+                }
+                else
+                {
+                    map.latitude += speed * ratio * delta.y;
+                    map.longitude += speed * ratio * delta.x;
+                }
                 map.latitude = Math.max( -85, Math.min( map.latitude, 85 ) );
                 map.longitude = Math.max( -180, Math.min( map.longitude, 180 ) );
 
