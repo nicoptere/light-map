@@ -169,6 +169,40 @@ module.exports = function(){
     }
 
     /**
+     * converts local X & Y coordinates and zoom level to latitude and longitude
+     * @param x X position on the canvas
+     * @param y Y position on the canvas
+     * @param zoom zoom level (optional, falls back to the map's current zoom level)
+     * @returns {*} array[ lat, lon ] in degrees
+     */
+    function pixelsToLatLon( x,y, zoom )
+    {
+
+        var c = this.mercator.latLngToPixels( -this.latitude, this.longitude, zoom || this.zoom  );
+        var pos = map.mercator.pixelsToLatLng( c[ 0 ] - this.width / 2 + x, c[ 1 ] - this.height / 2 + y, zoom || this.zoom );
+        pos[0] *= -1;
+        return pos;
+
+    }
+
+
+    /**
+     * converts latitude/longitude at a given zoom level to a local XY position
+     * @param lat latitude in degrees
+     * @param lon longitude in degress
+     * @param zoom zoom level (optional, falls back to the map's current zoom level)
+     * @returns {*} array[ X, Y ] in pixels
+     */
+    function latLonToPixels( lat,lon, zoom )
+    {
+
+        var c = this.mercator.latLngToPixels( -this.latitude, this.longitude, zoom || this.zoom  );
+        var p = this.mercator.latLngToPixels( -lat, lon, zoom || this.zoom  );
+        return [ (p[0]-c[0]) + this.width / 2, ( p[1] - c[1] ) + this.height / 2 ];
+
+    }
+
+    /**
      * returns the bounds of the view rect as rectangle (Rect object) of pixels in absolute coordinates
      * @returns new Rect( absolute x, absolute y, width, height )
      */
@@ -347,18 +381,6 @@ module.exports = function(){
     }
 
     /**
-     * returns a lat/lon as pixel X/Y coordinates
-     * @param lat
-     * @param lng
-     * @param zoom
-     * @returns {*}
-     */
-    function latLngToPixels( lat, lng, zoom )
-    {
-        return this.mercator.latLngToPixels( -lat, lng, zoom || this.zoom );
-    }
-
-    /**
      * gets the map resolution in pixels at a given zoom level
      * @param zoom
      * @returns {*}
@@ -406,7 +428,8 @@ module.exports = function(){
     _p.setProvider             = setProvider;
     _p.setSize                 = setSize;
     _p.renderTiles             = renderTiles;
-    _p.latLngToPixels          = latLngToPixels;
+    _p.pixelsToLatLon          = pixelsToLatLon;
+    _p.latLonToPixels          = latLonToPixels;
     _p.viewRectToLatLng        = viewRectToLatLng;
     _p.getViewPortBounds       = getViewPortBounds;
     _p.getViewRectCenter       = getViewRectCenter;

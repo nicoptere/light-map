@@ -27,6 +27,7 @@
 </head>
 
 <body>
+<!--http://wiki.openstreetmap.org/wiki/Slippy_map_tilenames-->
 
     <script src="light-map.min.js"></script>
     <fieldset id="settings">
@@ -53,10 +54,10 @@
         <hr>
 
         <label for="lat">latitude</label><br>
-        <input id="lat" type="range" min="-85" max="85" step=".00001" value="48.8" style="width: 100%" onchange="onChange()" oninput="onChange()">
+        <input id="lat" type="range" min="-85" max="85" step=".00001" value="0" style="width: 100%" onchange="onChange()" oninput="onChange()">
 
         <label for="lon">longitude</label><br>
-        <input id="lon" type="range" min="-180" max='180' step=".00001" value="2.3" style="width: 100%" onchange="onChange()" oninput="onChange()">
+        <input id="lon" type="range" min="-180" max='180' step=".00001" value="0" style="width: 100%" onchange="onChange()" oninput="onChange()">
 
         <label for="zoom">zoom level</label><br>
         <input id="zoom" type="range" min="1" max="18" step="1" value="1" style="width: 100%" onchange="onChange()" oninput="onChange()">

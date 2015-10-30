@@ -78,138 +78,100 @@
 
         ////////////////////////////////////////////
 
-        var mouse = { x:-1, y:-1};
         var origin = { x:0, y:0 };
         var delta = {x:0, y:0 };
-
         var mouseDown = false;
-        function onMouseDown(e){
 
-            if (!e) e = window.event;
+        function getPosition(e){
 
-            mouseDown = true;
-            if( mouse.x == -1 ){
-                if( 'ontouchstart' in window )
-                {
-                    getTouchPosition(e);
-                }else
-                {
-                    getMousePosition(e);
-                }
-            }
-            origin.x = mouse.x;
-            origin.y = mouse.y;
-            e.preventDefault();
-        }
+            var pos = {x:0, y:0};
+            if( e == null )return {x:window.innerWidth/2, y:window.innerHeight/2};
 
-        function onMouseUp(e){
-
-            if (!e) e = window.event;
-            mouseDown = false;
-            e.preventDefault();
-        }
-
-        function getMousePosition(e){
-
-            if (!e) e = window.event;
-            if (e.pageX || e.pageY){
-                mouse.x = e.pageX;
-                mouse.y = e.pageY;
-            }
-            else if (e.clientX || e.clientY){
-                mouse.x = e.clientX + document.body.scrollLeft + document.documentElement.scrollLeft;
-                mouse.y = e.clientY + document.body.scrollTop + document.documentElement.scrollTop;
-            }
-
-            var r = e.target.getBoundingClientRect();
-            mouse.x -= r.left;
-            mouse.y -= r.top;
-
-            delta.x = mouse.x - origin.x;
-            delta.y = -( mouse.y - origin.y );
-
-            e.preventDefault();
-
-        }
-
-        function getTouchPosition(e){
-
-            var touch = e.targetTouches[0];
-            var r = e.target.getBoundingClientRect();
-            mouse.x = touch.clientX - r.left;
-            mouse.y = touch.clientY - r.top;
-
-            delta.x = mouse.x - origin.x;
-            delta.y = -( mouse.y - origin.y );
-
-            e.preventDefault();
-
-        }
-
-        function resetMousePosition(e){
-
-            var r = e.target.getBoundingClientRect();
-            mouse.x = r.width * .5;
-            mouse.y = r.height * .5;
-
-        }
-
-        function onResize()
-        {
-            map.setSize(window.innerWidth, window.innerHeight);
-            map.setView();
-        }
-        window.addEventListener('resize', onResize, false );
-
-
-        ////////////////////////////////////////////
-
-        // end mouse handling
-
-        ////////////////////////////////////////////
-
-        var div ;
-        function update()
-        {
-            //drag
-            if( mouseDown )
+            if( 'ontouchstart' in window )
             {
-
-                var speed = .025;
-                var ratio = 1 / Math.pow( 2, map.zoom );
-
-                if( 'ontouchstart' in window ) {
-                    map.latitude  -= speed * ratio * delta.y;
-                    map.longitude -= speed * ratio * delta.x;
+                var touch = e.targetTouches[0];
+                pos.x = touch.clientX;
+                pos.y = touch.clientY;
+            }else
+            {
+                if (!e) e = window.event;
+                if (e.pageX || e.pageY){
+                    pos.x = e.pageX;
+                    pos.y = e.pageY;
                 }
-                else
-                {
-                    map.latitude += speed * ratio * delta.y;
-                    map.longitude += speed * ratio * delta.x;
+                else if (e.clientX || e.clientY){
+                    pos.x = e.clientX + document.body.scrollLeft + document.documentElement.scrollLeft;
+                    pos.y = e.clientY + document.body.scrollTop + document.documentElement.scrollTop;
                 }
-                map.latitude = Math.max( -85, Math.min( map.latitude, 85 ) );
-                map.longitude = Math.max( -180, Math.min( map.longitude, 180 ) );
+            }
+            var r = e.target.getBoundingClientRect();
+            pos.x -= r.left;
+            pos.y -= r.top;
+            return pos;
+        }
 
-                map.setView();
+        function zoom(e){
+
+            var p = getPosition( e.target == null? null : e );
+
+            var op = map.pixelsToLatLon( p.x, p.y );
+            map.zoom += e.wheelDelta > 0 ? 1 : -1;
+
+
+            if( map.zoom != map.minZoom && map.zoom != map.maxZoom ) {
+
+                var dp = map.pixelsToLatLon( p.x, p.y );
+                var lat = map.latitude + ( op[0] - dp[0] );
+                var lon = map.longitude + ( op[1] - dp[1] );
+                map.setView(lat, lon);
+            }
+            else
+            {
+//                map.setView();
+            }
+        }
+
+        function onDown(e){
+
+            origin = getPosition(e);
+            mouseDown = true;
+        }
+
+        function onUp(e){
+            mouseDown = false;
+        }
+
+        function onMove(e){
+
+            if( mouseDown ){
+
+                dest = getPosition(e);
+
+                var op = map.pixelsToLatLon( origin.x, origin.y );
+                var dp = map.pixelsToLatLon( dest.x, dest.y );
+
+                var lat = map.latitude + ( op[0] - dp[0] );
+                var lon = map.longitude + ( op[1] - dp[1] );
+
+                map.setView( lat, lon );
+
+                origin = dest;
 
             }
-
         }
 
-        function reset() {
-            map.latitude = map.longitude = map.zoom = 0;
-            delta.x = delta.y = 0;
-            map.setView();
-        }
+        ////////////////////////////////////////////
+
+        // UI controls
+
+        ////////////////////////////////////////////
 
         function zoomIn() {
-            map.zoom++;
-            map.setView();
+            zoom( {wheelDelta:1} );
         }
 
         function zoomOut() {
-            map.zoom--;
-            map.setView();
+            zoom( {wheelDelta:-1}  );
         }
 
         function goHome()
@@ -224,6 +186,12 @@
             navigator.geolocation.getCurrentPosition(geoSuccess);
         }
 
+        function onResize()
+        {
+            map.setSize(window.innerWidth, window.innerHeight);
+            map.setView();
+        }
+
         window.onload = function() {
 
             var zin = document.getElementById( "zoom-in" );
@@ -236,10 +204,10 @@
                 zout.addEventListener('touchstart', zoomOut, false );
                 loc.addEventListener('touchstart', goHome, false );
 
-                map.canvas.addEventListener('touchmove', getTouchPosition, false );
-                map.canvas.addEventListener('touchend', resetMousePosition, false );
-                map.canvas.addEventListener('touchstart', onMouseDown, false );
-                map.canvas.addEventListener('touchend', onMouseUp, false );
+                map.canvas.addEventListener('touchmove', onMove, false );
+                map.canvas.addEventListener('touchend', onUp, false );
+                map.canvas.addEventListener('touchstart', onDown, false );
+                map.canvas.addEventListener('touchend', onUp, false );
             }
             else
             {
@@ -247,21 +215,20 @@
                 zout.addEventListener( 'mousedown', zoomOut, false );
                 loc.addEventListener('mousedown', goHome, false );
 
-                map.canvas.addEventListener('mousemove', getMousePosition, false );
-                map.canvas.addEventListener('mouseleave', resetMousePosition, false );
-                map.canvas.addEventListener('mousedown', onMouseDown, false );
-                map.canvas.addEventListener('mouseup', onMouseUp, false );
+                map.canvas.addEventListener('mousemove', onMove, false );
+                map.canvas.addEventListener('mouseleave', onUp, false );
+                map.canvas.addEventListener('mousedown', onDown, false );
+                map.canvas.addEventListener('mouseup', onUp, false );
+                map.canvas.addEventListener( "mousewheel", zoom, false );
             }
-
-            setInterval( update, 1000 / 60 );
 
             map.latitude = ( Math.random() - .5 ) * 90 ;
             map.longitude = ( Math.random() - .5 ) * 180;
             map.zoom = 4;
+
+            window.addEventListener('resize', onResize, false );
             onResize();
         }
-
-
 
 
     </script>

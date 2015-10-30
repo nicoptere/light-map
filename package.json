@@ -1,6 +1,6 @@
 {
   "name": "light-map",
-  "version": "0.0.5",
+  "version": "0.0.6",
   "description": "a light-weight XYZ tile map viewer with a Canvas2D renderer",
   "main": "bin/light-map.js",
   "scripts": {

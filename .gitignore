@@ -6,4 +6,5 @@ node_modules/*
 /javascripts
 /params.json
 /stylesheets
+/example/vendor
 /map/Controls.js
